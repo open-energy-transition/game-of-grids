@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Game of Grids</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        :root {
+            --primary-color: #2196F3;
+            --success-color: #4CAF50;
+            --warning-color: #FF9800;
+            --danger-color: #F44336;
+            --info-color: #00BCD4;
+            --light-bg: #f8f9fa;
+            --border-color: #e9ecef;
+        }
+        
+        * { box-sizing: border-box; }
+        
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            margin: 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container { 
+            max-width: 1400px; margin: 0 auto; 
+            background: white; padding: 30px; border-radius: 12px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .header { 
+            text-align: center; margin-bottom: 40px; 
+            background: linear-gradient(135deg, var(--primary-color), var(--info-color));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        
+        .header h1 { font-size: 2.5rem; margin: 0; font-weight: 700; }
+        .header p { font-size: 1.2rem; color: #666; margin: 10px 0; }
+        
+        .patch { 
+            border: 1px solid var(--border-color); padding: 25px; margin: 20px 0; 
+            border-radius: 12px; position: relative; transition: all 0.3s ease;
+            background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+        }
+        
+        .patch:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        
+        .button { 
+            padding: 12px 24px; margin: 8px; cursor: pointer; border: none;
+            border-radius: 8px; font-weight: 600; font-size: 14px; 
+            transition: all 0.3s ease; position: relative; overflow: hidden;
+        }
+        
+        .button:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        
+        .button:active { transform: translateY(0); }
+        
+        .load-button { 
+            background: linear-gradient(135deg, var(--success-color), #45a049); 
+            color: white; 
+        }
+        
+        .complete-button { 
+            background: linear-gradient(135deg, var(--primary-color), #1976D2); 
+            color: white; 
+        }
+        
+        .test-button { 
+            background: linear-gradient(135deg, var(--warning-color), #F57C00); 
+            color: white; 
+        }
+        
+        .refresh-button { 
+            background: linear-gradient(135deg, #9C27B0, #7B1FA2); 
+            color: white; 
+        }
+        
+        .difficulty-easy { border-left: 5px solid var(--success-color); }
+        .difficulty-medium { border-left: 5px solid var(--warning-color); }
+        .difficulty-hard { border-left: 5px solid var(--danger-color); }
+        .completed { background: linear-gradient(135deg, #f8f9fa, #e9ecef); opacity: 0.8; }
+        
+        .info, .warning { 
+            margin: 25px 0; padding: 25px; border-radius: 10px; 
+            border-left: 5px solid; background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(248,249,250,0.9));
+        }
+        
+        .info { border-left-color: var(--info-color); }
+        .warning { border-left-color: var(--warning-color); }
+        
+        .controls { 
+            margin: 25px 0; padding: 25px; 
+            background: linear-gradient(135deg, var(--light-bg), #fff); 
+            border-radius: 10px; border: 1px solid var(--border-color);
+        }
+        
+        .status-badge { 
+            position: absolute; top: 20px; right: 20px; 
+            padding: 8px 16px; border-radius: 20px; font-size: 12px; 
+            font-weight: bold; text-transform: uppercase;
+        }
+        
+        .available { background: var(--success-color); color: white; }
+        .completed-badge { background: #6c757d; color: white; }
+        
+        .stats { 
+            font-size: 18px; margin: 20px 0; padding: 20px; 
+            background: linear-gradient(135deg, #e8f5e8, #f1f8e9); 
+            border-radius: 10px; border-left: 5px solid var(--success-color);
+        }
+        
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); 
+            gap: 25px; 
+        }
+        
+        .feature-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+            gap: 15px; margin: 15px 0; 
+        }
+        
+        .feature-item { 
+            padding: 12px; 
+            background: linear-gradient(135deg, #fff, #f8f9fa); 
+            border-radius: 8px; font-size: 14px; 
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s ease;
+        }
+        
+        .feature-item:hover { transform: scale(1.02); }
+        
+        .patch-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+            gap: 15px; margin: 20px 0; 
+        }
+        
+        .patch-stat { 
+            padding: 8px; background: var(--light-bg); 
+            border-radius: 6px; font-size: 14px; text-align: center;
+        }
+        
+        input[type="text"], input[type="checkbox"] { margin: 8px; }
+        input[type="text"] { 
+            padding: 10px; border: 2px solid var(--border-color); 
+            border-radius: 6px; transition: border-color 0.3s ease;
+        }
+        input[type="text"]:focus { 
+            border-color: var(--primary-color); outline: none; 
+        }
+        
+        .loading { opacity: 0.7; pointer-events: none; }
+        .loading::after {
+            content: "⏳"; position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); font-size: 24px;
+        }
+        
+        @media (max-width: 768px) {
+            .container { padding: 20px; margin: 10px; }
+            .patch { padding: 20px; }
+            .grid { grid-template-columns: 1fr; }
+            .header h1 { font-size: 2rem; }
+        }
+        
+        .pulse { animation: pulse 2s infinite; }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        .connection-online {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .connection-offline {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .progress-log {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 13px;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .progress-log.active {
+            display: block;
+        }
+
+        .progress-log .log-entry {
+            margin: 2px 0;
+            padding: 2px 0;
+        }
+
+        .progress-log .log-success { color: var(--success-color); }
+        .progress-log .log-error { color: var(--danger-color); }
+        .progress-log .log-warning { color: var(--warning-color); }
+        .progress-log .log-info { color: var(--info-color); }
+    </style>
+</head>
+<body>
+    <div class="connection-status" id="connectionStatus">🌐 Connecting...</div>
+    
+    <div class="container">
+        <div class="header">
+            <h1>⚡ Game of Grids</h1>
+            <p>Power Infrastructure Mapping with OpenStreetMap</p>
+        </div>
+        
+        <div class="warning">
+            <strong>🔧 Prerequisites:</strong>
+            <div class="feature-grid">
+                <div class="feature-item">✅ JOSM running with remote control enabled</div>
+                <div class="feature-item">🌐 Stable internet connection</div>
+                <div class="feature-item">🔍 Enable: Edit → Preferences → Remote Control</div>
+                <div class="feature-item">📡 Listening on port 8111 (default)</div>
+            </div>
+        </div>
+
+        <div class="info">
+            <strong>🚨 How it Works:</strong>
+            <div class="feature-grid">
+                <div class="feature-item">🎯 <strong>Click Load:</strong> JOSM zooms to patch area</div>
+                <div class="feature-item">📍 <strong>Area Loaded:</strong> Shows patch boundaries in JOSM</div>
+                <div class="feature-item">📥 <strong>Download Data:</strong> Use JOSM download dialog for power data</div>
+                <div class="feature-item">🌐 <strong>Alternative:</strong> Use Overpass Turbo link for filtered power data</div>
+            </div>
+        </div>
+        
+        <div class="info">
+            <strong>🎯 Power Infrastructure to Map:</strong>
+            <div class="feature-grid">
+                <div class="feature-item">⚡ All power lines & cables</div>
+                <div class="feature-item">🗼 Towers, poles, portals & terminals</div>
+                <div class="feature-item">🏭 Substations, Transformers, plants & generators</div>
+                <div class="feature-item">☀️ Solar panels & wind turbines</div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 20px;">
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="showCompleted" onchange="loadPatches()">
+                    <span>Show completed patches</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <span>Country:</span>
+                    <input type="text" id="countryCode" value="KZ" size="4" onchange="loadPatches()" 
+                           placeholder="e.g. KZ" style="text-transform: uppercase;">
+                </label>
+                <button onclick="loadPatches()" class="button refresh-button">🔄 Refresh Patches</button>
+                <button onclick="testJOSMButton()" class="button test-button">🧪 Test JOSM</button>
+                <button onclick="testOverpass()" class="button" style="background: linear-gradient(135deg, #00BCD4, #0097A7); color: white;">🌐 Test Overpass</button>
+                <button onclick="debugDatabase()" class="button" style="background: linear-gradient(135deg, #607D8B, #455A64); color: white;">🔍 Debug Info</button>
+            </div>
+        </div>
+        
+        <div id="stats" class="stats"></div>
+        <div id="progressLog" class="progress-log"></div>
+        <div id="patches" class="grid"></div>
+    </div>
+    
+    <script>
+        // Supabase configuration
+        const SUPABASE_URL = 'https://teumppdbhbrozswbpond.supabase.co/rest/v1';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRldW1wcGRiaGJyb3pzd2Jwb25kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAyMjY2MDYsImV4cCI6MjA2NTgwMjYwNn0.8j2yv4SuZJXnHV_spPIQQGsPBrvZrmYld6IlT7Omu7E';
+        
+        // JOSM configuration
+        const JOSM_BASE_URL = 'http://localhost:8111';
+        const JOSM_TIMEOUT = 30000; // 30 seconds in milliseconds
+        
+        let currentPatches = [];
+        let isLoading = false;
+
+        // Progress logging
+        function logProgress(message, type = 'info') {
+            const log = document.getElementById('progressLog');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function showProgressLog() {
+            const log = document.getElementById('progressLog');
+            log.classList.add('active');
+            log.innerHTML = '';
+        }
+
+        function hideProgressLog() {
+            setTimeout(() => {
+                const log = document.getElementById('progressLog');
+                log.classList.remove('active');
+            }, 5000);
+        }
+
+        // Supabase helper functions
+        function getSupabaseHeaders() {
+            return {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+            };
+        }
+
+        async function supabaseQuery(endpoint, options = {}) {
+            const url = `${SUPABASE_URL}${endpoint}`;
+            const response = await fetch(url, {
+                ...options,
+                headers: {
+                    ...getSupabaseHeaders(),
+                    ...options.headers
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Supabase error: ${response.status} ${response.statusText}`);
+            }
+            
+            return response.json();
+        }
+
+        // Connection status management
+        function updateConnectionStatus(online, message = '') {
+            const status = document.getElementById('connectionStatus');
+            if (online) {
+                status.className = 'connection-status connection-online';
+                status.textContent = '🌐 Online';
+            } else {
+                status.className = 'connection-status connection-offline';
+                status.textContent = `❌ ${message || 'Offline'}`;
+            }
+        }
+
+        // Test database connection
+        async function testConnection() {
+            try {
+                await supabaseQuery('/osmose_patches?select=count&limit=1');
+                updateConnectionStatus(true);
+                return true;
+            } catch (error) {
+                updateConnectionStatus(false, 'DB Error');
+                console.error('Database connection failed:', error);
+                return false;
+            }
+        }
+        
+        function setLoading(loading) {
+            isLoading = loading;
+            const patches = document.getElementById('patches');
+            if (loading) {
+                patches.classList.add('loading');
+            } else {
+                patches.classList.remove('loading');
+            }
+        }
+        
+        async function loadPatches() {
+            if (isLoading) return;
+            
+            setLoading(true);
+            const showCompleted = document.getElementById('showCompleted').checked;
+            const countryCode = document.getElementById('countryCode').value.toUpperCase() || 'KZ';
+            
+            try {
+                // Test connection first
+                const connected = await testConnection();
+                if (!connected) {
+                    throw new Error('Database connection failed');
+                }
+
+                // Build main query
+                let query = `/osmose_patches?select=patch_id,country_code,country_name,error_count,area_km2,perimeter_km,priority,difficulty,created_at&country_code=eq.${countryCode}&order=priority.desc,created_at.asc&limit=50`;
+                
+                const patches = await supabaseQuery(query);
+                
+                // If we need to filter out completed patches, check patch_assignments table
+                let filteredPatches = patches;
+                if (!showCompleted) {
+                    // Get completed patch IDs
+                    const completedQuery = `/patch_assignments?select=patch_id&status=eq.completed`;
+                    const completedPatches = await supabaseQuery(completedQuery);
+                    const completedIds = new Set(completedPatches.map(p => p.patch_id));
+                    
+                    filteredPatches = patches.filter(p => !completedIds.has(p.patch_id));
+                }
+                
+                currentPatches = filteredPatches;
+                
+                // Add status to patches
+                currentPatches = await Promise.all(currentPatches.map(async (patch) => {
+                    try {
+                        const assignmentQuery = `/patch_assignments?select=status&patch_id=eq.${patch.patch_id}&status=eq.completed&limit=1`;
+                        const assignments = await supabaseQuery(assignmentQuery);
+                        patch.status = assignments.length > 0 ? 'completed' : 'available';
+                    } catch (error) {
+                        patch.status = 'available';
+                    }
+                    return patch;
+                }));
+                
+                document.getElementById('stats').innerHTML = 
+                    `📊 Displaying <strong>${currentPatches.length}</strong> patches for <strong>${countryCode}</strong>`;
+                
+                renderPatches(currentPatches);
+                
+            } catch (error) {
+                console.error('Error loading patches:', error);
+                updateConnectionStatus(false, 'Load Error');
+                document.getElementById('patches').innerHTML = 
+                    `<div style="color: var(--danger-color); padding: 30px; text-align: center; background: #ffebee; border-radius: 10px;">
+                        ❌ <strong>Error loading patches:</strong> ${error.message}
+                        <br><br>Please check your internet connection and database access.
+                    </div>`;
+            } finally {
+                setLoading(false);
+            }
+        }
+        
+        function renderPatches(patches) {
+            const container = document.getElementById('patches');
+            
+            if (patches.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 60px; color: #666; background: var(--light-bg); border-radius: 10px;">
+                        <div style="font-size: 48px; margin-bottom: 20px;">🔍</div>
+                        <h3>No patches found</h3>
+                        <p>Try a different country code or enable "Show completed patches"</p>
+                    </div>`;
+                return;
+            }
+            
+            container.innerHTML = patches.map(patch => {
+                const difficultyClass = `difficulty-${(patch.difficulty || 'unknown').toLowerCase()}`;
+                const statusClass = patch.status === 'completed' ? 'completed' : '';
+                
+                return `
+                    <div class="patch ${difficultyClass} ${statusClass}">
+                        <div class="status-badge ${patch.status === 'completed' ? 'completed-badge' : 'available'}">
+                            ${patch.status.toUpperCase()}
+                        </div>
+                        
+                        <h3 style="margin: 0 0 20px 0; color: #333; display: flex; align-items: center; gap: 10px;">
+                            🗺️ Patch ${patch.patch_id}
+                            <span style="font-size: 14px; background: var(--light-bg); padding: 4px 8px; border-radius: 4px;">
+                                ${patch.difficulty || 'Unknown'}
+                            </span>
+                        </h3>
+                        
+                        <div class="patch-grid">
+                            <div class="patch-stat"><strong>Country</strong><br>${patch.country_name || patch.country_code}</div>
+                            <div class="patch-stat"><strong>Errors</strong><br>${patch.error_count || 0}</div>
+                            <div class="patch-stat"><strong>Area</strong><br>${patch.area_km2 ? parseFloat(patch.area_km2).toFixed(2) + ' km²' : 'N/A'}</div>
+                            <div class="patch-stat"><strong>Priority</strong><br>${patch.priority || 'N/A'}</div>
+                            <div class="patch-stat"><strong>Perimeter</strong><br>${patch.perimeter_km ? parseFloat(patch.perimeter_km).toFixed(2) + ' km' : 'N/A'}</div>
+                            <div class="patch-stat"><strong>Created</strong><br>${new Date(patch.created_at).toLocaleDateString()}</div>
+                        </div>
+                        
+                        ${patch.status !== 'completed' ? `
+                            <div style="margin-top: 20px; text-align: center;">
+                                <button class="button load-button" onclick="loadPatch('${patch.patch_id}', this)">
+                                    🚀 Load in JOSM
+                                </button>
+                                <button class="button complete-button" onclick="markComplete('${patch.patch_id}')">
+                                    ✅ Mark Complete
+                                </button>
+                            </div>
+                        ` : `
+                            <div style="text-align: center; margin-top: 20px; padding: 15px; background: #e8f5e8; border-radius: 8px;">
+                                <span style="color: var(--success-color); font-weight: bold;">✅ This patch has been completed</span>
+                            </div>
+                        `}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function getPatchDetails(patchId) {
+            try {
+                // Get patch geometry and details from Supabase
+                const patchQuery = `/osmose_patches?select=*&patch_id=eq.${patchId}&limit=1`;
+                const patches = await supabaseQuery(patchQuery);
+                
+                if (patches.length === 0) {
+                    throw new Error('Patch not found');
+                }
+                
+                const patch = patches[0];
+                
+                // Create bounding box from patch data
+                let bbox;
+                
+                if (patch.geometry) {
+                    try {
+                        const geom = typeof patch.geometry === 'string' ? JSON.parse(patch.geometry) : patch.geometry;
+                        
+                        if (geom && geom.coordinates) {
+                            let allCoords = [];
+                            if (geom.type === 'Polygon') {
+                                allCoords = geom.coordinates[0];
+                            } else if (geom.type === 'MultiPolygon') {
+                                allCoords = geom.coordinates.flat(2);
+                            }
+                            
+                            if (allCoords.length > 0) {
+                                const lons = allCoords.map(coord => coord[0]);
+                                const lats = allCoords.map(coord => coord[1]);
+                                
+                                bbox = {
+                                    min_lat: Math.min(...lats),
+                                    min_lon: Math.min(...lons),
+                                    max_lat: Math.max(...lats),
+                                    max_lon: Math.max(...lons)
+                                };
+                            }
+                        }
+                    } catch (geomError) {
+                        console.warn('Could not parse geometry:', geomError.message);
+                    }
+                }
+                
+                // Fallback: create bbox around Kazakhstan center if no geometry
+                if (!bbox) {
+                    console.warn('No geometry found, using default bbox for Kazakhstan');
+                    bbox = {
+                        min_lat: 48.0,
+                        min_lon: 67.0,
+                        max_lat: 48.02,
+                        max_lon: 67.02
+                    };
+                }
+                
+                // Add small padding to ensure we get surrounding infrastructure
+                const padding = 0.002;
+                bbox.min_lat -= padding;
+                bbox.min_lon -= padding;
+                bbox.max_lat += padding;
+                bbox.max_lon += padding;
+                
+                return {
+                    ...patch,
+                    bbox
+                };
+                
+            } catch (error) {
+                console.error('Error getting patch details:', error);
+                throw error;
+            }
+        }
+
+        // Overpass query with power tag filtering only
+        function createOverpassQuery(bbox) {
+            const { min_lat, min_lon, max_lat, max_lon } = bbox;
+            
+            // Query that returns only power-related tags
+            return `[out:xml][timeout:300];
+(
+  node["power"="tower"](${min_lat},${min_lon},${max_lat},${max_lon}) -> .towers;
+  node["power"="pole"](${min_lat},${min_lon},${max_lat},${max_lon}) -> .poles;
+  way["power"="line"](${min_lat},${min_lon},${max_lat},${max_lon}) -> .lines_connected;
+  way["power"="line"]["voltage"](if:t["voltage"] >= 90000)(${min_lat},${min_lon},${max_lat},${max_lon}) -> .high_voltage_lines;
+  way["power"="cable"](${min_lat},${min_lon},${max_lat},${max_lon}) -> .cables;
+  node.poles(w.high_voltage_lines) -> .hv_poles;
+
+  // Get substations explicitly as nodes, ways, and relations
+  node["power"="substation"](${min_lat},${min_lon},${max_lat},${max_lon}) -> .substation_nodes;
+  way["power"="substation"](${min_lat},${min_lon},${max_lat},${max_lon}) -> .substation_ways;
+  relation["power"="substation"](${min_lat},${min_lon},${max_lat},${max_lon}) -> .substation_relations;
+
+  // And similarly for power plants, generators, and transformers
+  node["power"="plant"](${min_lat},${min_lon},${max_lat},${max_lon}) -> .plant_nodes;
+  way["power"="plant"](${min_lat},${min_lon},${max_lat},${max_lon}) -> .plant_ways;
+  relation["power"="plant"](${min_lat},${min_lon},${max_lat},${max_lon}) -> .plant_relations;
+  
+  node["power"="generator"](${min_lat},${min_lon},${max_lat},${max_lon}) -> .generator_nodes;
+  way["power"="generator"](${min_lat},${min_lon},${max_lat},${max_lon}) -> .generator_ways;
+  relation["power"="generator"](${min_lat},${min_lon},${max_lat},${max_lon}) -> .generator_relations;
+  
+  node["power"="transformer"](${min_lat},${min_lon},${max_lat},${max_lon}) -> .transformer_nodes;
+  way["power"="transformer"](${min_lat},${min_lon},${max_lat},${max_lon}) -> .transformer_ways;
+  relation["power"="transformer"](${min_lat},${min_lon},${max_lat},${max_lon}) -> .transformer_relations;
+  
+  node["power"="portal"](${min_lat},${min_lon},${max_lat},${max_lon}) -> .portal_nodes;
+
+  // Get under construction infra
+  node["construction:power"](${min_lat},${min_lon},${max_lat},${max_lon}) -> .construction_nodes;
+  way["construction:power"](${min_lat},${min_lon},${max_lat},${max_lon}) -> .construction_ways;
+  relation["construction:power"](${min_lat},${min_lon},${max_lat},${max_lon}) -> .construction_relations;
+);
+(._;>;);
+// Union all elements 
+  (
+    .towers;
+    .hv_poles;
+    .cables;
+    .lines_connected;
+    .high_voltage_lines;
+    .substation_nodes;
+    .substation_ways;
+    .substation_relations;
+    .plant_nodes;
+    .plant_ways;
+    .plant_relations;
+    .generator_nodes;
+    .generator_ways;
+    .generator_relations;
+    .portal_nodes;
+    .transformer_nodes;
+    .transformer_ways;
+    .transformer_relations;
+    .construction_nodes;
+    .construction_ways;
+    .construction_relations;
+  );
+  
+  // First output: all elements with metadata
+  out meta;
+  // Second recursion: fetch all members of multipolygon relations, etc.
+  >;
+  // Output the full geometry (again with meta) so JOSM receives complete data
+  out meta;`;
+        }
+
+        // Query Overpass API with better error handling
+        async function queryOverpassAPI(query) {
+            logProgress('Querying Overpass API with power tag filtering...', 'info');
+            
+            const overpassServers = [
+                'https://overpass-api.de/api/interpreter',
+                'https://overpass.kumi.systems/api/interpreter',
+                'https://overpass.openstreetmap.ru/api/interpreter'
+            ];
+            
+            for (const server of overpassServers) {
+                try {
+                    logProgress(`Trying server: ${server}`, 'info');
+                    const response = await fetch(server, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams({ data: query }),
+                        signal: AbortSignal.timeout(30000)
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.text();
+                        
+                        // Check for error messages in response
+                        if (data.includes('error') || data.includes('runtime') || data.includes('timeout')) {
+                            throw new Error('Server returned error response');
+                        }
+                        
+                        logProgress(`Overpass query successful - ${(data.length / 1024).toFixed(1)} KB (power tags only)`, 'success');
+                        return data;
+                    } else {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    
+                } catch (error) {
+                    logProgress(`Server failed: ${error.message}`, 'warning');
+                    if (server === overpassServers[overpassServers.length - 1]) {
+                        throw error;
+                    }
+                }
+            }
+        }
+
+        // Try loading directly into JOSM without Overpass
+        async function loadJOSMDirect(bbox, patchId) {
+            logProgress('Attempting direct JOSM load...', 'info');
+            
+            const params = new URLSearchParams({
+                left: bbox.min_lon.toFixed(6),
+                right: bbox.max_lon.toFixed(6),
+                top: bbox.max_lat.toFixed(6),
+                bottom: bbox.min_lat.toFixed(6),
+                new_layer: 'true',
+                layer_name: `Patch ${patchId} - Power Infrastructure`
+            });
+            
+            try {
+                const response = await fetch(`${JOSM_BASE_URL}/load_and_zoom?${params}`, {
+                    method: 'GET',
+                    signal: AbortSignal.timeout(JOSM_TIMEOUT)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`JOSM responded with ${response.status}`);
+                }
+                
+                logProgress('Direct JOSM load successful', 'success');
+                return true;
+            } catch (error) {
+                logProgress(`Direct JOSM load failed: ${error.message}`, 'error');
+                throw error;
+            }
+        }
+
+        // Import OSM data into JOSM
+        async function importJOSMData(osmData, layerName) {
+            logProgress('Importing data to JOSM...', 'info');
+            
+            try {
+                // First try using load_data endpoint which accepts raw data
+                const formData = new FormData();
+                formData.append('data', new Blob([osmData], { type: 'application/xml' }));
+                
+                const params = new URLSearchParams({
+                    new_layer: 'true',
+                    layer_name: layerName
+                });
+                
+                const response = await fetch(`${JOSM_BASE_URL}/load_data?${params}`, {
+                    method: 'POST',
+                    body: formData,
+                    signal: AbortSignal.timeout(JOSM_TIMEOUT)
+                });
+                
+                if (response.ok) {
+                    logProgress('Data imported successfully via load_data', 'success');
+                    return true;
+                }
+                
+                // If that fails, try the import endpoint with a temporary file
+                const tempUrl = URL.createObjectURL(new Blob([osmData], { type: 'application/xml' }));
+                
+                const importParams = new URLSearchParams({
+                    url: tempUrl,
+                    new_layer: 'true',
+                    layer_name: layerName
+                });
+                
+                const importResponse = await fetch(`${JOSM_BASE_URL}/import?${importParams}`, {
+                    method: 'GET',
+                    signal: AbortSignal.timeout(JOSM_TIMEOUT)
+                });
+                
+                URL.revokeObjectURL(tempUrl);
+                
+                if (importResponse.ok) {
+                    logProgress('Data imported successfully via import endpoint', 'success');
+                    return true;
+                }
+                
+                throw new Error('Both import methods failed');
+                
+            } catch (error) {
+                logProgress(`Import failed: ${error.message}`, 'error');
+                throw error;
+            }
+        }
+
+        // Main patch loading function with multiple fallback strategies
+        async function loadPatch(patchId, buttonElement) {
+            const originalText = buttonElement.textContent;
+            buttonElement.textContent = '⏳ Loading...';
+            buttonElement.disabled = true;
+            buttonElement.classList.add('pulse');
+            
+            showProgressLog();
+            
+            try {
+                logProgress(`Starting to load patch ${patchId}`, 'info');
+                
+                // Get patch details
+                const patchData = await getPatchDetails(patchId);
+                
+                if (!patchData.bbox) {
+                    throw new Error('Could not determine patch area coordinates');
+                }
+                
+                logProgress(`Patch bbox: ${Object.values(patchData.bbox).map(v => v.toFixed(6)).join(', ')}`, 'info');
+                
+                // Test JOSM connection
+                const josmStatus = await testJOSM();
+                if (!josmStatus.connected) {
+                    throw new Error(`JOSM not connected: ${josmStatus.error}`);
+                }
+                
+                logProgress('JOSM connection verified', 'success');
+                
+                let success = false;
+                let method = '';
+                
+                // Strategy 1: Try direct JOSM load (fastest and most reliable)
+                try {
+                    await loadJOSMDirect(patchData.bbox, patchId);
+                    success = true;
+                    method = 'Direct JOSM load';
+                } catch (error) {
+                    logProgress('Direct load failed, trying Overpass...', 'warning');
+                }
+                
+                // Strategy 2: Query Overpass and import
+                if (!success) {
+                    try {
+                        logProgress('Querying Overpass for power infrastructure (filtered tags)...', 'info');
+                        const overpassQuery = createOverpassQuery(patchData.bbox);
+                        const osmData = await queryOverpassAPI(overpassQuery);
+                        
+                        // Count features
+                        const nodes = (osmData.match(/<node/g) || []).length;
+                        const ways = (osmData.match(/<way/g) || []).length;
+                        const relations = (osmData.match(/<relation/g) || []).length;
+                        
+                        logProgress(`Found ${nodes} nodes, ${ways} ways, ${relations} relations`, 'info');
+                        
+                        if (nodes + ways + relations > 0) {
+                            await importJOSMData(osmData, `Patch ${patchId} - Power Infrastructure`);
+                            success = true;
+                            method = 'Overpass + Import (power tags only)';
+                        } else {
+                            logProgress('No power infrastructure found in area', 'warning');
+                        }
+                    } catch (error) {
+                        logProgress('Overpass strategy failed', 'error');
+                    }
+                }
+                
+                // Show results
+                if (success) {
+                    logProgress(`✅ Patch loaded successfully using ${method}!`, 'success');
+                    alert(`✅ Patch ${patchId} loaded successfully!\n\n🎯 Check JOSM - the data should be loaded in a new layer.\n\n🏷️ Only power-related tags were downloaded for cleaner editing.\n\nMethod used: ${method}`);
+                } else {
+                    if (confirm(`⚠️ Could not load patch ${patchId} automatically.\n\nWould you like to see manual download options?`)) {
+                        showManualOptions(patchData.bbox, patchId);
+                    }
+                }
+                
+            } catch (error) {
+                logProgress(`Fatal error: ${error.message}`, 'error');
+                alert(`❌ Failed to load patch: ${error.message}`);
+            } finally {
+                buttonElement.textContent = originalText;
+                buttonElement.disabled = false;
+                buttonElement.classList.remove('pulse');
+                hideProgressLog();
+            }
+        }
+        
+        // Show manual download options
+        function showManualOptions(bbox, patchId) {
+            const { min_lat, min_lon, max_lat, max_lon } = bbox;
+            
+            // Create simple Overpass query for power infrastructure
+            const overpassQuery = createSimpleOverpassQuery(bbox);
+            const overpassTurboUrl = `https://overpass-turbo.eu/?Q=${encodeURIComponent(overpassQuery)}&C=${(min_lat + max_lat) / 2};${(min_lon + max_lon) / 2};12`;
+            
+            const dialog = document.createElement('div');
+            dialog.style.cssText = `
+                position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+                background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                max-width: 650px; width: 90%; z-index: 10000; font-family: inherit; max-height: 80vh; overflow-y: auto;
+            `;
+            
+            dialog.innerHTML = `
+                <h3 style="margin: 0 0 20px 0; color: #333;">🛠️ Manual Download Options</h3>
+                
+                <div style="margin: 15px 0; padding: 10px; background: #f5f5f5; border-radius: 6px; font-size: 14px;">
+                    <strong>📍 Bounding Box:</strong><br>
+                    <code style="background: #f0f0f0; padding: 4px; border-radius: 3px; font-size: 12px;">
+                        ${min_lat.toFixed(6)}, ${min_lon.toFixed(6)}, ${max_lat.toFixed(6)}, ${max_lon.toFixed(6)}
+                    </code>
+                </div>
+                
+                <div style="margin: 20px 0;">
+                    <button onclick="window.open('${overpassTurboUrl}', '_blank')" 
+                            style="display: block; width: 100%; padding: 12px; margin: 8px 0; background: #2196F3; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">
+                        🎯 Open in Overpass Turbo (Power Infrastructure)
+                    </button>
+                    
+                    <button onclick="navigator.clipboard.writeText('${min_lat.toFixed(6)},${min_lon.toFixed(6)},${max_lat.toFixed(6)},${max_lon.toFixed(6)}').then(() => alert('📋 Bounding box copied!'))" 
+                            style="display: block; width: 100%; padding: 12px; margin: 8px 0; background: #9C27B0; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">
+                        📋 Copy Bounding Box
+                    </button>
+                </div>
+                
+                <div style="margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 6px; font-size: 14px;">
+                    <strong>💡 JOSM Direct Download:</strong><br>
+                    <ol style="margin: 10px 0; padding-left: 20px;">
+                        <li>In JOSM: File → Download Data (Ctrl+Shift+Down)</li>
+                        <li>Click "Copy Bounding Box" button above</li>
+                        <li>In download dialog, paste the coordinates</li>
+                        <li>Check "Download as new layer"</li>
+                        <li>Click "Download"</li>
+                    </ol>
+                </div>
+                
+                <button onclick="this.parentElement.remove()" 
+                        style="padding: 8px 16px; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer; float: right;">
+                    Close
+                </button>
+                <div style="clear: both;"></div>
+            `;
+            
+            document.body.appendChild(dialog);
+        }
+        
+        async function markComplete(patchId) {
+            const mapperId = prompt("Enter your OpenStreetMap username:");
+            if (!mapperId || !mapperId.trim()) {
+                alert("Username is required to mark patch as complete.");
+                return;
+            }
+            
+            const notes = prompt("Add completion notes (optional):") || '';
+            
+            if (confirm(`Mark Patch ${patchId} as complete by ${mapperId}?`)) {
+                try {
+                    // Check if patch exists
+                    const patchQuery = `/osmose_patches?select=patch_id&patch_id=eq.${patchId}&limit=1`;
+                    const patches = await supabaseQuery(patchQuery);
+                    
+                    if (patches.length === 0) {
+                        throw new Error(`Patch ${patchId} not found`);
+                    }
+                    
+                    // Check if already completed
+                    const existingQuery = `/patch_assignments?select=status,mapper_id,completed_at&patch_id=eq.${patchId}&status=eq.completed&limit=1`;
+                    const existing = await supabaseQuery(existingQuery);
+                    
+                    if (existing.length > 0) {
+                        const existingAssignment = existing[0];
+                        alert(`❌ Patch already completed by ${existingAssignment.mapper_id} at ${new Date(existingAssignment.completed_at).toLocaleString()}`);
+                        return;
+                    }
+                    
+                    // Create completion record
+                    const completionData = {
+                        patch_id: patchId,
+                        mapper_id: mapperId.trim(),
+                        status: 'completed',
+                        assigned_at: new Date().toISOString(),
+                        completed_at: new Date().toISOString(),
+                        completion_notes: notes.trim()
+                    };
+                    
+                    await supabaseQuery('/patch_assignments', {
+                        method: 'POST',
+                        body: JSON.stringify(completionData)
+                    });
+                    
+                    alert(`✅ Patch ${patchId} marked as completed!`);
+                    loadPatches(); // Refresh the list
+                    
+                } catch (error) {
+                    console.error('Error marking patch complete:', error);
+                    alert(`❌ Failed to mark complete: ${error.message}`);
+                }
+            }
+        }
+        
+        async function testOverpass() {
+            const testBbox = {
+                min_lat: 48.0,
+                min_lon: 67.0,
+                max_lat: 48.01,
+                max_lon: 67.01
+            };
+            
+            const testQuery = createSimpleOverpassQuery(testBbox);
+
+            console.log('🧪 Testing Overpass API...');
+            const startTime = Date.now();
+            
+            try {
+                const response = await fetch('https://overpass-api.de/api/interpreter', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ data: testQuery }),
+                    signal: AbortSignal.timeout(10000)
+                });
+                
+                const responseTime = Date.now() - startTime;
+                
+                if (response.ok) {
+                    const osmData = await response.text();
+                    const nodes = (osmData.match(/<node/g) || []).length;
+                    const ways = (osmData.match(/<way/g) || []).length;
+                    
+                    alert(`✅ Overpass API Test Result
+
+✅ Connection successful!
+⏱️ Response time: ${responseTime}ms
+📊 Power infrastructure found:
+  • ${nodes} nodes
+  • ${ways} ways
+📦 Data size: ${(osmData.length / 1024).toFixed(1)} KB
+
+🎯 Overpass API is working properly.`);
+                } else {
+                    alert(`❌ Overpass API Test Result
+
+❌ HTTP Error: ${response.status} ${response.statusText}
+⏱️ Response time: ${responseTime}ms
+
+Try again later or use manual download options.`);
+                }
+                
+            } catch (error) {
+                const responseTime = Date.now() - startTime;
+                alert(`❌ Overpass API Test Result
+
+❌ Connection failed: ${error.message}
+⏱️ Response time: ${responseTime}ms
+
+Try again later or use manual download options.`);
+            }
+        }
+        
+        async function testJOSM() {
+            try {
+                logProgress('Testing JOSM connection...', 'info');
+                const response = await fetch(`${JOSM_BASE_URL}/version`, { 
+                    method: 'GET',
+                    signal: AbortSignal.timeout(5000)
+                });
+                
+                if (response.ok) {
+                    const version = await response.json();
+                    logProgress('JOSM connection successful', 'success');
+                    return { 
+                        connected: true, 
+                        version,
+                        message: 'JOSM connection successful!'
+                    };
+                } else {
+                    return { 
+                        connected: false, 
+                        error: `HTTP ${response.status}: ${response.statusText}`,
+                        help: 'Check JOSM remote control settings'
+                    };
+                }
+            } catch (error) {
+                logProgress(`JOSM connection failed: ${error.message}`, 'error');
+                return {
+                    connected: false,
+                    error: error.name === 'AbortError' ? 'Connection timeout' : error.message,
+                    help: 'Make sure JOSM is running with remote control enabled'
+                };
+            }
+        }
+
+        // Event handlers
+        window.testJOSMButton = async function() {
+            showProgressLog();
+            const result = await testJOSM();
+            
+            if (result.connected) {
+                alert(`✅ ${result.message}\n\n🔧 JOSM Version Info:\n${JSON.stringify(result.version, null, 2)}\n\n🎯 Remote control is working properly!`);
+            } else {
+                const message = `❌ JOSM Connection Failed\n\n💡 Error: ${result.error}\n\n🔧 Troubleshooting:\n1. Make sure JOSM is running\n2. Enable remote control: Edit → Preferences → Remote Control\n3. Check "Enable remote control"\n4. Restart JOSM after enabling\n5. Check firewall isn't blocking port 8111`;
+                
+                if (confirm(message + '\n\nOpen JOSM help page?')) {
+                    window.open('https://josm.openstreetmap.de/wiki/Help/Preferences/RemoteControl', '_blank');
+                }
+            }
+            hideProgressLog();
+        };
+        
+        async function debugDatabase() {
+            try {
+                updateConnectionStatus(true, 'Querying...');
+                
+                // Get country statistics
+                const countriesQuery = '/osmose_patches?select=country_code&limit=1000';
+                const allPatches = await supabaseQuery(countriesQuery);
+                
+                // Count by country
+                const countryCounts = {};
+                allPatches.forEach(patch => {
+                    const country = patch.country_code;
+                    countryCounts[country] = (countryCounts[country] || 0) + 1;
+                });
+                
+                const topCountries = Object.entries(countryCounts)
+                    .sort(([,a], [,b]) => b - a)
+                    .slice(0, 15);
+                
+                // Get sample patches
+                const sampleQuery = '/osmose_patches?select=patch_id,country_code,error_count,area_km2&limit=5';
+                const samplePatches = await supabaseQuery(sampleQuery);
+                
+                let message = '🔍 Database Debug Info\n\n';
+                
+                if (topCountries.length > 0) {
+                    message += '🌍 Top Countries with Patches:\n';
+                    topCountries.forEach(([country, count]) => {
+                        message += `  ${country}: ${count.toLocaleString()} patches\n`;
+                    });
+                } else {
+                    message += '❌ No countries found in database\n';
+                }
+                
+                message += `\n📊 Database Status: Connected`;
+                message += `\n🔧 Frontend Version: Improved JOSM Loader`;
+                message += `\n🌐 API Endpoint: ${SUPABASE_URL}`;
+                
+                if (samplePatches.length > 0) {
+                    message += '\n\n📝 Sample Patches:\n';
+                    samplePatches.forEach(p => {
+                        message += `  ${p.patch_id} (${p.country_code}): ${p.error_count || 0} errors, ${p.area_km2 ? parseFloat(p.area_km2).toFixed(2) : 'N/A'} km²\n`;
+                    });
+                }
+                
+                alert(message);
+                updateConnectionStatus(true);
+                
+            } catch (error) {
+                console.error('Debug failed:', error);
+                updateConnectionStatus(false, 'Debug Error');
+                alert(`❌ Debug failed: ${error.message}`);
+            }
+        }
+        
+        // Initialize the application
+        window.addEventListener('load', async () => {
+            updateConnectionStatus(false, 'Connecting...');
+            
+            // Test initial connection
+            const connected = await testConnection();
+            if (connected) {
+                loadPatches();
+            } else {
+                document.getElementById('patches').innerHTML = 
+                    `<div style="color: var(--danger-color); padding: 30px; text-align: center; background: #ffebee; border-radius: 10px;">
+                        ❌ <strong>Database connection failed</strong><br><br>
+                        Please check your internet connection and try refreshing the page.
+                    </div>`;
+            }
+        });
+        
+        // Auto-refresh every 5 minutes
+        let lastRefresh = Date.now();
+        setInterval(() => {
+            if (Date.now() - lastRefresh > 300000 && !isLoading) {
+                loadPatches();
+                lastRefresh = Date.now();
+            }
+        }, 60000);
+        
+        // Handle online/offline events
+        window.addEventListener('online', () => {
+            testConnection();
+        });
+
+        window.addEventListener('offline', () => {
+            updateConnectionStatus(false, 'No Internet');
+        });
+    </script>
+</body>
+</html>
