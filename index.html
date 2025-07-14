@@ -31,7 +31,7 @@
     <div class="container">
         <header class="header">
             <h1>⚡ Game of Grids</h1>
-            <p>Collaborative Power Infrastructure Mapping with OpenStreetMap</p>
+            <p>Automated Power Infrastructure Mapping with OpenStreetMap & JOSM</p>
         </header>
         
         <!-- Enhanced prerequisite section -->
@@ -69,42 +69,42 @@
             </div>
         </section>
 
-        <!-- Enhanced workflow section -->
+        <!-- Workflow section -->
         <section class="info" role="region" aria-labelledby="workflow-heading">
             <h2 id="workflow-heading">🚨 Mapping Workflow</h2>
             <div class="workflow-steps">
                 <div class="workflow-step">
                     <div class="step-number">1</div>
                     <div class="step-content">
-                        <h3>🎯 Load Patch</h3>
-                        <p>Click Load to zoom JOSM to patch area with boundaries</p>
+                        <h3>🎯 Load Patch + Power Data</h3>
+                        <p>Click "Load in JOSM + Power Data" to automatically load patch boundaries AND all power infrastructure data in JOSM</p>
                     </div>
                 </div>
                 <div class="workflow-step">
                     <div class="step-number">2</div>
                     <div class="step-content">
-                        <h3>📥 Download Data</h3>
-                        <p>Use JOSM download dialog or Overpass Turbo for power data</p>
+                        <h3>🗺️ Map Missing Features</h3>
+                        <p>Review existing power data and add any missing infrastructure in the designated area</p>
                     </div>
                 </div>
                 <div class="workflow-step">
                     <div class="step-number">3</div>
                     <div class="step-content">
-                        <h3>🗺️ Map Features</h3>
-                        <p>Add all power infrastructure in the designated area</p>
+                        <h3>💾 Upload Changes</h3>
+                        <p>Upload your changes to OpenStreetMap with appropriate changeset comments</p>
                     </div>
                 </div>
                 <div class="workflow-step">
                     <div class="step-number">4</div>
                     <div class="step-content">
                         <h3>✅ Mark Complete</h3>
-                        <p>Submit your completion with notes and username</p>
+                        <p>Submit your completion with notes and username to track progress</p>
                     </div>
                 </div>
             </div>
         </section>
         
-        <!-- Enhanced mapping targets -->
+        <!-- Mapping targets -->
         <section class="info" role="region" aria-labelledby="targets-heading">
             <h2 id="targets-heading">🎯 Power Infrastructure to Map</h2>
             <div class="feature-grid">
@@ -139,7 +139,7 @@
             </div>
         </section>
         
-        <!-- Enhanced controls with better accessibility -->
+        <!-- Controls with better accessibility -->
         <section class="controls" role="region" aria-labelledby="controls-heading">
             <h2 id="controls-heading" class="sr-only">Application Controls</h2>
             <div class="controls-grid">
@@ -192,7 +192,7 @@
             <div class="help-tooltips">
                 <small id="refresh-help" class="help-text">Reload patches from database</small>
                 <small id="josm-help" class="help-text">Check JOSM connection and remote control</small>
-                <small id="overpass-help" class="help-text">Test Overpass API availability</small>
+                <small id="overpass-help" class="help-text">Test the same Overpass query used for automatic JOSM loading</small>
                 <small id="debug-help" class="help-text">Show database statistics and connection info</small>
             </div>
         </section>
@@ -224,22 +224,24 @@
                 <div class="shortcut-item"><kbd>Esc</kbd> Close expanded patch</div>
                 <div class="shortcut-item"><kbd>R</kbd> Refresh patches</div>
                 <div class="shortcut-item"><kbd>T</kbd> Test JOSM</div>
+                <div class="shortcut-item"><kbd>Ctrl+D</kbd> Toggle dark mode</div>
                 <div class="shortcut-item"><kbd>?</kbd> Toggle this help</div>
             </div>
         </div>
     </div>
     
-    <div class="patch-overlay" id="patchOverlay" onclick="closeAllPatches()" role="button" tabindex="0" aria-label="Close expanded patch"></div>
+    <div class="patch-overlay" id="patchOverlay" onclick="closeAllPatches()" onkeydown="if(event.key==='Escape' || event.key==='Enter') closeAllPatches()" role="button" tabindex="0" aria-label="Close expanded patch (click outside or press Escape)"></div>
     
     <script>
         'use strict';
         
-        // Enhanced configuration with validation
+        // Configuration with validation
         const CONFIG = {
             SUPABASE_URL: 'https://teumppdbhbrozswbpond.supabase.co/rest/v1',
             SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRldW1wcGRiaGJyb3pzd2Jwb25kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAyMjY2MDYsImV4cCI6MjA2NTgwMjYwNn0.8j2yv4SuZJXnHV_spPIQQGsPBrvZrmYld6IlT7Omu7E',
             JOSM_BASE_URL: 'http://localhost:8111',
-            JOSM_TIMEOUT: 30000,
+            JOSM_TIMEOUT: 30000, // 30 seconds for basic operations
+            OVERPASS_TIMEOUT: 180000, // 3 minutes for Overpass data loading
             REFRESH_INTERVAL: 300000, // 5 minutes
             MAX_RETRIES: 3,
             PAGINATION_SIZE: 50
@@ -307,7 +309,7 @@
         
         const toast = new ToastManager();
 
-        // Enhanced theme management
+        // Theme management
         class ThemeManager {
             constructor() {
                 this.applyTheme(AppState.theme);
@@ -335,7 +337,7 @@
         
         const themeManager = new ThemeManager();
 
-        // Enhanced progress logging with better UX
+        // Progress logging with better UX
         function logProgress(message, type = 'info') {
             const log = document.getElementById('progressLog');
             const entry = document.createElement('div');
@@ -378,7 +380,7 @@
             overlay.classList.remove('active');
         }
 
-        // Enhanced Supabase integration with better error handling
+        // Supabase integration with better error handling
         function getSupabaseHeaders() {
             return {
                 'apikey': CONFIG.SUPABASE_KEY,
@@ -418,7 +420,7 @@
             }
         }
 
-        // Enhanced connection status management
+        // Connection status management
         function updateConnectionStatus(online, message = '') {
             const status = document.getElementById('connectionStatus');
             AppState.connectionStatus = online ? 'online' : 'offline';
@@ -434,7 +436,7 @@
             }
         }
 
-        // Enhanced validation
+        // Validation
         function validateCountryCode(code) {
             const trimmed = code.trim().toUpperCase();
             const isValid = /^[A-Z]{2}$/.test(trimmed);
@@ -458,7 +460,7 @@
             }
         }
 
-        // Enhanced connection testing
+        // Connection testing
         async function testConnection() {
             try {
                 await supabaseQuery('/osmose_patches?select=count&limit=1');
@@ -486,7 +488,7 @@
             }
         }
         
-        // Enhanced patch loading with better error handling and UX
+        // Patch loading with better error handling and UX
         async function loadPatches() {
             if (AppState.isLoading) return;
             
@@ -514,7 +516,7 @@
                 const patches = await supabaseQuery(query);
                 logProgress(`Found ${patches.length} patches in database`, 'success');
                 
-                // Enhanced filtering for completed patches
+                // Filtering for completed patches
                 let filteredPatches = patches;
                 if (!showCompleted) {
                     const completedQuery = `/patch_assignments?select=patch_id&status=eq.completed`;
@@ -562,7 +564,7 @@
             }
         }
         
-        // Enhanced patch rendering with better accessibility
+        // Patch rendering with better accessibility
         function renderPatches(patches) {
             const container = document.getElementById('patches');
             
@@ -634,7 +636,7 @@
                         <div id="patch-${patch.patch_id}-desc" class="patch-summary">
                             ${patch.status === 'completed' ? 
                                 '<div class="completion-indicator">✅ Mapping completed</div>' :
-                                '<div class="action-hint">📍 Click to start mapping</div>'
+                                '<div class="action-hint">🚀 One-click JOSM loading with power data</div>'
                             }
                         </div>
                         
@@ -756,15 +758,16 @@
             }).join('');
         }
 
-        // Enhanced keyboard navigation
+        // Keyboard navigation for patches
         function handlePatchKeydown(event, patchId) {
-            if (event.key === 'Enter' || event.key === ' ') {
+            // Only handle Enter to expand patches - Space should work normally in form inputs
+            if (event.key === 'Enter') {
                 event.preventDefault();
                 togglePatchExpansion(patchId);
             }
         }
 
-        // Enhanced patch expansion with better accessibility
+        // Patch expansion with better accessibility
         function togglePatchExpansion(patchId) {
             const patchElement = document.getElementById(`patch-${patchId}`);
             const overlay = document.getElementById('patchOverlay');
@@ -818,7 +821,7 @@
             document.body.style.overflow = '';
         }
 
-        // Enhanced progress logging for patches
+        // Progress logging for patches
         function logProgressForPatch(patchId, message, type = 'info') {
             const log = document.getElementById(`progressLog-${patchId}`);
             if (!log) return;
@@ -846,7 +849,7 @@
             console.log(`[${type.toUpperCase()}] Patch ${patchId}: ${message}`);
         }
 
-        // Enhanced JOSM and patch loading
+        // JOSM and patch loading
         async function getPatchDetails(patchId) {
             try {
                 logProgressForPatch(patchId, 'Fetching patch geometry...', 'info');
@@ -924,10 +927,10 @@
                 top: bbox.max_lat.toFixed(6),
                 bottom: bbox.min_lat.toFixed(6),
                 new_layer: 'true',
-                layer_name: `Patch ${patchId} - Power Infrastructure Mapping`
+                layer_name: `Patch ${patchId} - Boundaries`
             });
             
-            logProgressForPatch(patchId, 'Sending load request to JOSM...', 'info');
+            logProgressForPatch(patchId, 'Loading patch boundaries in JOSM...', 'info');
             
             const response = await fetch(`${CONFIG.JOSM_BASE_URL}/load_and_zoom?${params}`, {
                 method: 'GET',
@@ -938,7 +941,46 @@
                 throw new Error(`JOSM responded with HTTP ${response.status}: ${response.statusText}`);
             }
             
-            logProgressForPatch(patchId, 'JOSM load request successful', 'success');
+            logProgressForPatch(patchId, 'Patch boundaries loaded successfully', 'success');
+            return true;
+        }
+
+        // Fixed and simplified Overpass query generation
+        function createOverpassQuery(bbox) {
+            // Simplified but comprehensive power infrastructure query
+            return `[out:xml][timeout:180];
+(
+  node["power"~"^(tower|pole|portal|substation|plant|generator|transformer)$"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
+  way["power"~"^(line|cable|substation|plant|generator|transformer)$"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
+  relation["power"~"^(substation|plant|generator)$"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
+);
+out meta;
+>;
+out meta skel qt;`;
+        }
+
+        async function loadOverpassDataInJOSM(bbox, patchId) {
+            const overpassQuery = createOverpassQuery(bbox);
+            
+            logProgressForPatch(patchId, 'Querying Overpass API for power infrastructure...', 'info');
+
+            // Create a properly encoded URL for the Overpass query
+            const overpassUrl = `https://overpass-api.de/api/interpreter`;
+            const encodedQuery = encodeURIComponent(overpassQuery);
+
+            // Send Overpass query directly to JOSM via import command
+            const importUrl = `${CONFIG.JOSM_BASE_URL}/import?url=${encodeURIComponent(overpassUrl + '?data=' + encodedQuery)}&new_layer=true&layer_name=${encodeURIComponent(`Patch ${patchId} - Power Infrastructure`)}`;
+
+            const response = await fetch(importUrl, {
+                method: 'GET',
+                signal: AbortSignal.timeout(CONFIG.OVERPASS_TIMEOUT)
+            });
+
+            if (!response.ok) {
+                throw new Error(`JOSM import failed with HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            logProgressForPatch(patchId, 'Power infrastructure data loaded successfully in JOSM', 'success');
             return true;
         }
         
@@ -950,12 +992,19 @@
                 return;
             }
             
+            // Allow any characters including spaces in username
+            if (mapperId.length < 1) {
+                toast.show('Username cannot be empty.', 'warning');
+                document.getElementById(`mapperId-${patchId}`).focus();
+                return;
+            }
+            
             const originalText = buttonElement.innerHTML;
             buttonElement.innerHTML = '⏳ <span>Loading...</span>';
             buttonElement.disabled = true;
             
             try {
-                logProgressForPatch(patchId, `Starting load process for ${mapperId}`, 'info');
+                logProgressForPatch(patchId, `Starting comprehensive patch load for ${mapperId}`, 'info');
                 
                 const patchData = await getPatchDetails(patchId);
                 
@@ -972,10 +1021,16 @@
                 
                 logProgressForPatch(patchId, 'JOSM connection verified ✓', 'success');
                 
+                // Step 1: Load patch boundaries
+                buttonElement.innerHTML = '📍 <span>Loading Boundaries...</span>';
                 await loadJOSMDirect(patchData.bbox, patchId);
                 
-                logProgressForPatch(patchId, '🎉 Patch loaded successfully!', 'success');
-                toast.show(`Patch ${patchId} loaded in JOSM for ${mapperId}`, 'success');
+                // Step 2: Load power infrastructure data from Overpass
+                buttonElement.innerHTML = '🔌 <span>Loading Power Data...</span>';
+                await loadOverpassDataInJOSM(patchData.bbox, patchId);
+                
+                logProgressForPatch(patchId, '🎉 Complete! Patch boundaries and power infrastructure loaded in JOSM', 'success');
+                toast.show(`Patch ${patchId} fully loaded in JOSM with power infrastructure data for ${mapperId}`, 'success');
                 
             } catch (error) {
                 logProgressForPatch(patchId, `❌ Error: ${error.message}`, 'error');
@@ -986,11 +1041,18 @@
             }
         }
 
-        // Enhanced completion workflow
+        // Completion workflow
         async function markPatchComplete(patchId) {
             const mapperId = document.getElementById(`mapperId-${patchId}`).value.trim();
             if (!mapperId) {
                 toast.show('Please enter your OpenStreetMap username before marking complete.', 'warning');
+                document.getElementById(`mapperId-${patchId}`).focus();
+                return;
+            }
+            
+            // Allow any characters including spaces in username
+            if (mapperId.length < 1) {
+                toast.show('Username cannot be empty.', 'warning');
                 document.getElementById(`mapperId-${patchId}`).focus();
                 return;
             }
@@ -1018,7 +1080,7 @@
                 
                 logProgressForPatch(patchId, 'Creating completion record...', 'info');
                 
-                // Create completion record with enhanced data
+                // Create completion record with data
                 const completionData = {
                     patch_id: patchId,
                     mapper_id: mapperId,
@@ -1027,7 +1089,7 @@
                     assigned_at: new Date().toISOString(),
                     completed_at: new Date().toISOString(),
                     completion_notes: mappingNotes || null,
-                    app_version: '2.0.0' // Track which version was used
+                    app_version: '2.0.1' // Track which version was used
                 };
                 
                 await supabaseQuery('/patch_assignments', {
@@ -1051,27 +1113,21 @@
             }
         }
 
-        // Enhanced Overpass integration
+        // Fixed Overpass integration for manual viewing
         async function openOverpassLink(patchId) {
             try {
                 const patchData = await getPatchDetails(patchId);
                 const bbox = patchData.bbox;
                 
-                const overpassQuery = `[out:xml][timeout:60];
-(
-  node["power"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
-  way["power"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
-  relation["power"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
-);
-(._;>;);
-out meta;`;
-
+                // Use the same simplified query for consistency
+                const overpassQuery = createOverpassQuery(bbox);
+                
                 const encodedQuery = encodeURIComponent(overpassQuery);
-                const overpassUrl = `https://overpass-turbo.eu/?Q=${encodedQuery}&C=${((bbox.min_lat + bbox.max_lat) / 2).toFixed(6)};${((bbox.min_lon + bbox.max_lon) / 2).toFixed(6)};15`;
+                const overpassUrl = `https://overpass-turbo.eu/?Q=${encodedQuery}`;
                 
                 window.open(overpassUrl, '_blank');
-                logProgressForPatch(patchId, 'Opened in Overpass Turbo', 'success');
-                toast.show('Opened patch in Overpass Turbo', 'info');
+                logProgressForPatch(patchId, 'Opened power infrastructure query in Overpass Turbo', 'success');
+                toast.show('Opened patch in Overpass Turbo for manual review', 'info');
                 
             } catch (error) {
                 logProgressForPatch(patchId, `Overpass error: ${error.message}`, 'error');
@@ -1079,7 +1135,7 @@ out meta;`;
             }
         }
 
-        // Enhanced test functions
+        // Test functions for main page
         async function testJOSM() {
             try {
                 const response = await fetch(`${CONFIG.JOSM_BASE_URL}/version`, { 
@@ -1112,14 +1168,7 @@ out meta;`;
         
         async function testOverpass() {
             const testBbox = { min_lat: 48.0, min_lon: 67.0, max_lat: 48.01, max_lon: 67.01 };
-            
-            const testQuery = `[out:xml][timeout:30];
-(
-  node["power"](${testBbox.min_lat},${testBbox.min_lon},${testBbox.max_lat},${testBbox.max_lon});
-  way["power"](${testBbox.min_lat},${testBbox.min_lon},${testBbox.max_lat},${testBbox.max_lon});
-);
-(._;>;);
-out meta;`;
+            const testQuery = createOverpassQuery(testBbox);
 
             console.log('🧪 Testing Overpass API...');
             const startTime = Date.now();
@@ -1182,7 +1231,7 @@ Check your internet connection or try again later.`;
             }
         }
 
-        // Enhanced JOSM test for main page
+        // JOSM test for main page
         window.testJOSMButton = async function() {
             showProgressIndicator('Testing JOSM connection...');
             
@@ -1228,7 +1277,7 @@ ${result.help ? '\n💡 ' + result.help : ''}`;
             }
         };
         
-        // Enhanced debug function
+        // Debug function
         async function debugDatabase() {
             try {
                 showProgressIndicator('Gathering debug information...');
@@ -1238,7 +1287,7 @@ ${result.help ? '\n💡 ' + result.help : ''}`;
                 const countriesQuery = '/osmose_patches?select=country_code,country_name&limit=2000';
                 const allPatches = await supabaseQuery(countriesQuery);
                 
-                // Enhanced statistics
+                // Statistics
                 const countryCounts = {};
                 const countryNames = {};
                 allPatches.forEach(patch => {
@@ -1290,7 +1339,7 @@ ${result.help ? '\n💡 ' + result.help : ''}`;
                 }
                 
                 message += `\n🔧 Technical Information:\n`;
-                message += `  Frontend version: 2.0.0 (Enhanced)\n`;
+                message += `  Frontend version: 2.0.1 (Fixed Overpass)\n`;
                 message += `  API endpoint: ${CONFIG.SUPABASE_URL}\n`;
                 message += `  Connection retries: ${CONFIG.MAX_RETRIES}\n`;
                 message += `  Last refresh: ${new Date(AppState.lastRefresh).toLocaleTimeString()}\n`;
@@ -1317,16 +1366,27 @@ ${result.help ? '\n💡 ' + result.help : ''}`;
             }
         }
 
-        // Enhanced keyboard shortcuts
+        // Keyboard shortcuts
         document.addEventListener('keydown', function(event) {
-            // Don't trigger shortcuts when typing in inputs
-            if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+            // Don't trigger shortcuts when typing in inputs, textareas, or any editable content
+            if (event.target.tagName === 'INPUT' || 
+                event.target.tagName === 'TEXTAREA' || 
+                event.target.isContentEditable ||
+                event.target.closest('input') ||
+                event.target.closest('textarea')) {
                 return;
             }
             
             switch(event.key) {
                 case 'Escape':
                     closeAllPatches();
+                    break;
+                case ' ': // Space key
+                    // Only close patches if space is pressed outside of input fields
+                    if (!event.target.closest('.patch-expanded-content')) {
+                        event.preventDefault();
+                        closeAllPatches();
+                    }
                     break;
                 case 'r':
                 case 'R':
@@ -1359,7 +1419,7 @@ ${result.help ? '\n💡 ' + result.help : ''}`;
             help.style.display = help.style.display === 'block' ? 'none' : 'block';
         }
 
-        // Enhanced initialization
+        // Initialization
         window.addEventListener('load', async () => {
             updateConnectionStatus(false, 'Connecting...');
             
@@ -1397,7 +1457,7 @@ ${result.help ? '\n💡 ' + result.help : ''}`;
             }
         });
         
-        // Enhanced auto-refresh with exponential backoff
+        // Auto-refresh with exponential backoff
         let refreshInterval = CONFIG.REFRESH_INTERVAL;
         setInterval(() => {
             if (Date.now() - AppState.lastRefresh > refreshInterval && !AppState.isLoading) {
@@ -1410,7 +1470,7 @@ ${result.help ? '\n💡 ' + result.help : ''}`;
             }
         }, 60000);
         
-        // Enhanced online/offline handling
+        // Online/offline handling
         window.addEventListener('online', async () => {
             toast.show('Connection restored', 'success');
             await testConnection();

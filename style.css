@@ -1,6 +1,6 @@
-/* Game of Grids - Enhanced Power Infrastructure Mapping Styles */
+/* Game of Grids - Power Infrastructure Mapping Styles */
 
-/* Enhanced CSS Custom Properties with Dark Mode Support */
+/* CSS Custom Properties with Dark Mode Support */
 :root {
     /* Light Theme Colors */
     --primary-color: #036d7a;
@@ -99,7 +99,7 @@
     --shadow-hover: 0 8px 25px rgba(42, 109, 60, 0.3);
 }
 
-/* Enhanced CSS Reset */
+/* CSS Reset */
 *,
 *::before,
 *::after {
@@ -118,7 +118,7 @@ body {
     padding: var(--space-lg);
     transition: background var(--transition-base), color var(--transition-base);
     
-    /* Enhanced font rendering */
+    /* Font rendering */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
@@ -137,7 +137,7 @@ body {
     border: 0;
 }
 
-/* Enhanced Container */
+/* Container */
 .container {
     max-width: 1400px;
     margin: 0 auto;
@@ -161,7 +161,7 @@ body {
     z-index: 1;
 }
 
-/* Enhanced Header */
+/* Header */
 .header {
     text-align: center;
     margin-bottom: var(--space-2xl);
@@ -371,7 +371,7 @@ body {
     font-size: 0.875rem;
 }
 
-/* Enhanced Patch Cards */
+/* Patch Cards */
 .patch {
     border: 2px solid var(--border-color);
     padding: var(--space-xl);
@@ -480,7 +480,7 @@ body {
     border-left-color: var(--text-muted) !important;
 }
 
-/* Enhanced Buttons */
+/* Buttons */
 .button {
     display: inline-flex;
     align-items: center;
@@ -583,7 +583,7 @@ body {
     color: var(--text-inverse);
 }
 
-/* Enhanced Info and Warning Sections */
+/* Info and Warning Sections */
 .info,
 .warning {
     margin: var(--space-xl) 0;
@@ -613,7 +613,7 @@ body {
     font-weight: 600;
 }
 
-/* Enhanced Workflow Steps */
+/* Workflow Steps */
 .workflow-steps {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -664,7 +664,7 @@ body {
     line-height: 1.5;
 }
 
-/* Enhanced Controls Section */
+/* Controls Section */
 .controls {
     margin: var(--space-xl) 0;
     padding: var(--space-xl);
@@ -768,7 +768,7 @@ body {
     margin-top: var(--space-md);
 }
 
-/* Enhanced Action Buttons Layout */
+/* Action Buttons Layout */
 .action-buttons {
     display: flex;
     gap: var(--space-sm);
@@ -777,7 +777,7 @@ body {
     flex-wrap: wrap;
 }
 
-/* Enhanced Feature Grid */
+/* Feature Grid */
 .feature-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -827,7 +827,7 @@ body {
     line-height: 1.4;
 }
 
-/* Enhanced Stats Display */
+/* Stats Display */
 .stats {
     font-size: 1.125rem;
     margin: var(--space-lg) 0;
@@ -850,7 +850,7 @@ body {
     font-weight: 600;
 }
 
-/* Enhanced Patch Header and Layout */
+/* Patch Header and Layout */
 .patch-header {
     margin-bottom: var(--space-md);
 }
@@ -877,7 +877,7 @@ body {
     opacity: 0.8;
 }
 
-/* Enhanced Patch Grid */
+/* Patch Grid */
 .patch-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
@@ -955,7 +955,7 @@ body {
     font-size: 0.875rem;
 }
 
-/* Enhanced Expanded Content */
+/* Expanded Content */
 .patch-expanded-content {
     display: none;
     margin-top: var(--space-xl);
@@ -1012,7 +1012,7 @@ body {
     transform: scale(1.1);
 }
 
-/* Enhanced Form Sections */
+/* Form Sections */
 .form-sections {
     display: flex;
     flex-direction: column;
@@ -1117,7 +1117,7 @@ body {
     font-weight: 600;
 }
 
-/* Enhanced Status Badge */
+/* Status Badge */
 .status-badge {
     position: absolute;
     top: var(--space-lg);
@@ -1170,7 +1170,7 @@ body {
     border-color: var(--danger-color);
 }
 
-/* Enhanced Progress Log */
+/* Progress Log */
 .progress-log {
     margin: var(--space-lg) 0;
     padding: var(--space-lg);
@@ -1340,7 +1340,7 @@ kbd {
     transform: translateY(-1px);
 }
 
-/* Enhanced Animations */
+/* Animations */
 @keyframes fadeInUp {
     from {
         opacity: 0;
@@ -1397,7 +1397,7 @@ kbd {
     animation: pulse 2s infinite;
 }
 
-/* Enhanced Responsive Design */
+/* Responsive Design */
 @media (max-width: 1200px) {
     :root {
         --space-lg: 1rem;
@@ -1555,7 +1555,7 @@ kbd {
     }
 }
 
-/* Accessibility Enhancements */
+/* Accessibility Improvements */
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
