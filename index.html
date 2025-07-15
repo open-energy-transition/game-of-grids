@@ -60,10 +60,10 @@
                     </div>
                 </div>
                 <div class="feature-item">
-                    <span class="feature-icon">📡</span>
+                    <span class="feature-icon">🔨</span>
                     <div>
-                        <strong>Port 8111</strong>
-                        <p>Default JOSM listening port</p>
+                        <strong>Create New Objects</strong>
+                        <p>Enable in Remote Control permissions</p>
                     </div>
                 </div>
             </div>
@@ -76,22 +76,22 @@
                 <div class="workflow-step">
                     <div class="step-number">1</div>
                     <div class="step-content">
-                        <h3>🎯 Load Patch + Power Data</h3>
-                        <p>Click "Load in JOSM + Power Data" to automatically load patch boundaries AND all power infrastructure data in JOSM</p>
+                        <h3>🎯 Load Patch Boundary</h3>
+                        <p>Click "Load in JOSM" to create a boundary rectangle and load power infrastructure data</p>
                     </div>
                 </div>
                 <div class="workflow-step">
                     <div class="step-number">2</div>
                     <div class="step-content">
                         <h3>🗺️ Map Missing Features</h3>
-                        <p>Review existing power data and add any missing infrastructure in the designated area</p>
+                        <p>Review existing power data and add any missing infrastructure within the boundary</p>
                     </div>
                 </div>
                 <div class="workflow-step">
                     <div class="step-number">3</div>
                     <div class="step-content">
                         <h3>💾 Upload Changes</h3>
-                        <p>Upload your changes to OpenStreetMap with appropriate changeset comments</p>
+                        <p>Upload only the power infrastructure data (boundary layer cannot be uploaded)</p>
                     </div>
                 </div>
                 <div class="workflow-step">
@@ -139,17 +139,16 @@
             </div>
         </section>
         
-        <!-- Controls with better accessibility -->
+        <!-- Controls -->
         <section class="controls" role="region" aria-labelledby="controls-heading">
             <h2 id="controls-heading" class="sr-only">Application Controls</h2>
             <div class="controls-grid">
                 <div class="control-group">
                     <label class="checkbox-label">
-                        <input type="checkbox" id="showCompleted" onchange="loadPatches()" aria-describedby="completed-help">
+                        <input type="checkbox" id="showCompleted" onchange="loadPatches()">
                         <span class="checkmark"></span>
                         <span>Show completed patches</span>
                     </label>
-                    <small id="completed-help" class="help-text">Include patches that have been marked as complete</small>
                 </div>
                 
                 <div class="control-group">
@@ -163,51 +162,37 @@
                             pattern="[A-Z]{2}" 
                             onchange="validateAndLoadPatches()" 
                             oninput="this.value = this.value.toUpperCase()"
-                            placeholder="e.g. KZ" 
-                            aria-describedby="country-help"
-                            autocomplete="country"
+                            placeholder="e.g. KZ"
                         >
                         <div class="validation-message" id="countryValidation"></div>
                     </div>
-                    <small id="country-help" class="help-text">Enter 2-letter ISO country code</small>
                 </div>
                 
                 <div class="action-buttons">
-                    <button onclick="loadPatches()" class="button refresh-button" aria-describedby="refresh-help">
+                    <button onclick="loadPatches()" class="button refresh-button">
                         🔄 <span>Refresh Patches</span>
                     </button>
-                    <button onclick="testJOSMButton()" class="button test-button" aria-describedby="josm-help">
+                    <button onclick="testJOSMButton()" class="button test-button">
                         🧪 <span>Test JOSM</span>
                     </button>
-                    <button onclick="testOverpass()" class="button overpass-button" aria-describedby="overpass-help">
+                    <button onclick="testOverpass()" class="button overpass-button">
                         🌐 <span>Test Overpass</span>
                     </button>
-                    <button onclick="debugDatabase()" class="button debug-button" aria-describedby="debug-help">
+                    <button onclick="debugDatabase()" class="button debug-button">
                         🔍 <span>Debug Info</span>
                     </button>
                 </div>
             </div>
-            
-            <!-- Help tooltips -->
-            <div class="help-tooltips">
-                <small id="refresh-help" class="help-text">Reload patches from database</small>
-                <small id="josm-help" class="help-text">Check JOSM connection and remote control</small>
-                <small id="overpass-help" class="help-text">Test the same Overpass query used for automatic JOSM loading</small>
-                <small id="debug-help" class="help-text">Show database statistics and connection info</small>
-            </div>
         </section>
         
-        <!-- Enhanced stats display -->
+        <!-- Stats and progress -->
         <div id="stats" class="stats" role="status" aria-live="polite"></div>
-        
-        <!-- Progress indicators -->
         <div id="progressIndicator" class="progress-indicator">
             <div class="progress-bar">
                 <div class="progress-fill"></div>
             </div>
             <div class="progress-text">Loading...</div>
         </div>
-        
         <div id="progressLog" class="progress-log" role="log" aria-live="polite"></div>
         
         <!-- Main content area -->
@@ -230,34 +215,33 @@
         </div>
     </div>
     
-    <div class="patch-overlay" id="patchOverlay" onclick="closeAllPatches()" onkeydown="if(event.key==='Escape' || event.key==='Enter') closeAllPatches()" role="button" tabindex="0" aria-label="Close expanded patch (click outside or press Escape)"></div>
+    <div class="patch-overlay" id="patchOverlay" onclick="closeAllPatches()" onkeydown="if(event.key==='Escape' || event.key==='Enter') closeAllPatches()" role="button" tabindex="0" aria-label="Close expanded patch"></div>
     
     <script>
         'use strict';
         
-        // Configuration with validation
+        // Configuration
         const CONFIG = {
             SUPABASE_URL: 'https://teumppdbhbrozswbpond.supabase.co/rest/v1',
             SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRldW1wcGRiaGJyb3pzd2Jwb25kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAyMjY2MDYsImV4cCI6MjA2NTgwMjYwNn0.8j2yv4SuZJXnHV_spPIQQGsPBrvZrmYld6IlT7Omu7E',
             JOSM_BASE_URL: 'http://localhost:8111',
-            JOSM_TIMEOUT: 30000, // 30 seconds for basic operations
-            OVERPASS_TIMEOUT: 180000, // 3 minutes for Overpass data loading
-            REFRESH_INTERVAL: 300000, // 5 minutes
+            JOSM_TIMEOUT: 30000,
+            OVERPASS_TIMEOUT: 180000,
+            REFRESH_INTERVAL: 300000,
             MAX_RETRIES: 3,
             PAGINATION_SIZE: 50
         };
         
-        // Application state management
+        // Application state
         const AppState = {
             currentPatches: [],
             isLoading: false,
             connectionStatus: 'connecting',
-            retryCount: 0,
             theme: localStorage.getItem('theme') || 'light',
             lastRefresh: Date.now()
         };
 
-        // Enhanced toast notification system
+        // Toast notification system
         class ToastManager {
             constructor() {
                 this.container = document.getElementById('toastContainer');
@@ -267,43 +251,23 @@
                 const toast = document.createElement('div');
                 toast.className = `toast toast-${type}`;
                 toast.setAttribute('role', 'alert');
-                toast.setAttribute('aria-live', 'assertive');
                 
-                const icon = this.getIcon(type);
+                const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+                const icon = icons[type] || 'ℹ️';
+                
                 toast.innerHTML = `
                     <div class="toast-content">
                         <span class="toast-icon">${icon}</span>
                         <span class="toast-message">${message}</span>
-                        <button class="toast-close" onclick="this.parentElement.parentElement.remove()" aria-label="Close notification">×</button>
+                        <button class="toast-close" onclick="this.parentElement.parentElement.remove()">×</button>
                     </div>
                 `;
                 
                 this.container.appendChild(toast);
                 
-                // Auto-remove after duration
                 if (duration > 0) {
-                    setTimeout(() => {
-                        if (toast.parentElement) {
-                            toast.remove();
-                        }
-                    }, duration);
+                    setTimeout(() => toast.remove(), duration);
                 }
-                
-                return toast;
-            }
-            
-            getIcon(type) {
-                const icons = {
-                    success: '✅',
-                    error: '❌', 
-                    warning: '⚠️',
-                    info: 'ℹ️'
-                };
-                return icons[type] || 'ℹ️';
-            }
-            
-            clear() {
-                this.container.innerHTML = '';
             }
         }
         
@@ -331,18 +295,16 @@
                 const button = document.getElementById('themeToggle');
                 const icon = button.querySelector('.theme-icon');
                 icon.textContent = AppState.theme === 'light' ? '🌙' : '☀️';
-                button.setAttribute('aria-label', `Switch to ${AppState.theme === 'light' ? 'dark' : 'light'} mode`);
             }
         }
         
         const themeManager = new ThemeManager();
 
-        // Progress logging with better UX
+        // Utility functions
         function logProgress(message, type = 'info') {
             const log = document.getElementById('progressLog');
             const entry = document.createElement('div');
             entry.className = `log-entry log-${type}`;
-            entry.setAttribute('role', 'status');
             
             const timestamp = new Date().toLocaleTimeString();
             entry.innerHTML = `
@@ -353,34 +315,48 @@
             log.appendChild(entry);
             log.scrollTop = log.scrollHeight;
             
-            // Limit log entries to prevent memory issues
+            // Limit log entries
             const entries = log.querySelectorAll('.log-entry');
-            if (entries.length > 100) {
+            if (entries.length > 50) {
                 entries[0].remove();
             }
             
             console.log(`[${type.toUpperCase()}] ${message}`);
         }
 
+        function logProgressForPatch(patchId, message, type = 'info') {
+            const log = document.getElementById(`progressLog-${patchId}`);
+            if (!log) return;
+            
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            
+            const timestamp = new Date().toLocaleTimeString();
+            entry.innerHTML = `
+                <span class="log-timestamp">[${timestamp}]</span>
+                <span class="log-message">${message}</span>
+            `;
+            
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+            log.classList.add('active');
+            
+            console.log(`[${type.toUpperCase()}] Patch ${patchId}: ${message}`);
+        }
+
         function showProgressIndicator(text = 'Loading...') {
-            const indicator = document.getElementById('progressIndicator');
             const overlay = document.getElementById('loadingOverlay');
             const textElement = overlay.querySelector('.loading-text');
-            
             textElement.textContent = text;
-            indicator.classList.add('active');
             overlay.classList.add('active');
         }
 
         function hideProgressIndicator() {
-            const indicator = document.getElementById('progressIndicator');
             const overlay = document.getElementById('loadingOverlay');
-            
-            indicator.classList.remove('active');
             overlay.classList.remove('active');
         }
 
-        // Supabase integration with better error handling
+        // Database functions
         function getSupabaseHeaders() {
             return {
                 'apikey': CONFIG.SUPABASE_KEY,
@@ -397,30 +373,22 @@
                 try {
                     const response = await fetch(url, {
                         ...options,
-                        headers: {
-                            ...getSupabaseHeaders(),
-                            ...options.headers
-                        }
+                        headers: { ...getSupabaseHeaders(), ...options.headers }
                     });
                     
                     if (!response.ok) {
-                        throw new Error(`Supabase error: ${response.status} ${response.statusText}`);
+                        throw new Error(`Database error: ${response.status} ${response.statusText}`);
                     }
                     
                     return await response.json();
-                    
                 } catch (error) {
-                    if (attempt === CONFIG.MAX_RETRIES) {
-                        throw error;
-                    }
-                    
-                    logProgress(`Attempt ${attempt} failed, retrying... (${error.message})`, 'warning');
+                    if (attempt === CONFIG.MAX_RETRIES) throw error;
                     await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
                 }
             }
         }
 
-        // Connection status management
+        // Connection status
         function updateConnectionStatus(online, message = '') {
             const status = document.getElementById('connectionStatus');
             AppState.connectionStatus = online ? 'online' : 'offline';
@@ -428,11 +396,21 @@
             if (online) {
                 status.className = 'connection-status connection-online';
                 status.textContent = '🌐 Online';
-                status.setAttribute('aria-label', 'Database connection is online');
             } else {
                 status.className = 'connection-status connection-offline';
                 status.textContent = `❌ ${message || 'Offline'}`;
-                status.setAttribute('aria-label', `Database connection is offline: ${message || 'Unknown error'}`);
+            }
+        }
+
+        async function testConnection() {
+            try {
+                await supabaseQuery('/osmose_patches?select=count&limit=1');
+                updateConnectionStatus(true);
+                return true;
+            } catch (error) {
+                updateConnectionStatus(false, 'DB Error');
+                console.error('Database connection failed:', error);
+                return false;
             }
         }
 
@@ -459,21 +437,6 @@
                 loadPatches();
             }
         }
-
-        // Connection testing
-        async function testConnection() {
-            try {
-                await supabaseQuery('/osmose_patches?select=count&limit=1');
-                updateConnectionStatus(true);
-                AppState.retryCount = 0;
-                return true;
-            } catch (error) {
-                updateConnectionStatus(false, 'DB Error');
-                console.error('Database connection failed:', error);
-                AppState.retryCount++;
-                return false;
-            }
-        }
         
         function setLoading(loading) {
             AppState.isLoading = loading;
@@ -488,7 +451,7 @@
             }
         }
         
-        // Patch loading with better error handling and UX
+        // Patch loading
         async function loadPatches() {
             if (AppState.isLoading) return;
             
@@ -504,19 +467,16 @@
             try {
                 logProgress(`Loading patches for ${countryCode}...`, 'info');
                 
-                // Test connection first
                 const connected = await testConnection();
                 if (!connected) {
                     throw new Error('Database connection failed');
                 }
 
-                // Build optimized query
                 let query = `/osmose_patches?select=patch_id,country_code,country_name,error_count,area_km2,perimeter_km,priority,difficulty,created_at&country_code=eq.${countryCode}&order=priority.desc,created_at.asc&limit=${CONFIG.PAGINATION_SIZE}`;
                 
                 const patches = await supabaseQuery(query);
                 logProgress(`Found ${patches.length} patches in database`, 'success');
                 
-                // Filtering for completed patches
                 let filteredPatches = patches;
                 if (!showCompleted) {
                     const completedQuery = `/patch_assignments?select=patch_id&status=eq.completed`;
@@ -529,7 +489,6 @@
                 
                 AppState.currentPatches = filteredPatches;
                 
-                // Add status information with better performance
                 const patchIds = AppState.currentPatches.map(p => p.patch_id);
                 const statusQuery = `/patch_assignments?select=patch_id,status&patch_id=in.(${patchIds.join(',')})&status=eq.completed`;
                 const completedStatuses = await supabaseQuery(statusQuery);
@@ -554,7 +513,6 @@
                         <div class="error-icon">❌</div>
                         <h3>Error loading patches</h3>
                         <p>${error.message}</p>
-                        <p>Please check your internet connection and database access.</p>
                         <button onclick="loadPatches()" class="button refresh-button">🔄 Try Again</button>
                     </div>`;
                 
@@ -564,7 +522,7 @@
             }
         }
         
-        // Patch rendering with better accessibility
+        // Patch rendering
         function renderPatches(patches) {
             const container = document.getElementById('patches');
             
@@ -579,7 +537,6 @@
                 return;
             }
             
-            // Update stats with better formatting
             const countryCode = document.getElementById('countryCode').value.toUpperCase() || 'KZ';
             const completedCount = patches.filter(p => p.status === 'completed').length;
             const availableCount = patches.length - completedCount;
@@ -598,11 +555,9 @@
                              tabindex="0" role="button" 
                              onclick="togglePatchExpansion('${patch.patch_id}')"
                              onkeydown="handlePatchKeydown(event, '${patch.patch_id}')"
-                             aria-expanded="false"
-                             aria-describedby="patch-${patch.patch_id}-desc">
+                             aria-expanded="false">
                         
-                        <div class="status-badge ${patch.status === 'completed' ? 'completed-badge' : 'available'}"
-                             aria-label="Patch status: ${patch.status}">
+                        <div class="status-badge ${patch.status === 'completed' ? 'completed-badge' : 'available'}">
                             ${patch.status.toUpperCase()}
                         </div>
                         
@@ -633,19 +588,19 @@
                             </div>
                         </div>
                         
-                        <div id="patch-${patch.patch_id}-desc" class="patch-summary">
+                        <div class="patch-summary">
                             ${patch.status === 'completed' ? 
                                 '<div class="completion-indicator">✅ Mapping completed</div>' :
-                                '<div class="action-hint">🚀 One-click JOSM loading with power data</div>'
+                                '<div class="action-hint">🚀 Click to load boundary and power data in JOSM</div>'
                             }
                         </div>
                         
-                        <!-- Enhanced Expanded Content -->
+                        <!-- Expanded Content -->
                         <div class="patch-expanded-content" onclick="event.stopPropagation()">
                             <div class="expanded-inner">
                                 <header class="expanded-header">
                                     <h4>🗺️ Patch ${patch.patch_id} Details</h4>
-                                    <button class="close-button-header" onclick="closePatchExpansion('${patch.patch_id}'); event.stopPropagation();" aria-label="Close patch details">×</button>
+                                    <button class="close-button-header" onclick="closePatchExpansion('${patch.patch_id}'); event.stopPropagation();">×</button>
                                 </header>
                                 
                                 <div class="form-sections">
@@ -653,30 +608,12 @@
                                         <h5>👤 Mapper Information</h5>
                                         <div class="form-row">
                                             <div class="form-group">
-                                                <label for="mapperId-${patch.patch_id}">
-                                                    OpenStreetMap Username *
-                                                    <span class="required-indicator" aria-label="Required field">*</span>
-                                                </label>
-                                                <input type="text" 
-                                                       id="mapperId-${patch.patch_id}" 
-                                                       required 
-                                                       autocomplete="username"
-                                                       placeholder="Your OSM username"
-                                                       aria-describedby="mapperId-${patch.patch_id}-help">
-                                                <small id="mapperId-${patch.patch_id}-help" class="help-text">
-                                                    Your OpenStreetMap account username for attribution
-                                                </small>
+                                                <label for="mapperId-${patch.patch_id}">OpenStreetMap Username *</label>
+                                                <input type="text" id="mapperId-${patch.patch_id}" required placeholder="Your OSM username">
                                             </div>
                                             <div class="form-group">
                                                 <label for="mapperEmail-${patch.patch_id}">Email (Optional)</label>
-                                                <input type="email" 
-                                                       id="mapperEmail-${patch.patch_id}" 
-                                                       autocomplete="email"
-                                                       placeholder="your@email.com"
-                                                       aria-describedby="mapperEmail-${patch.patch_id}-help">
-                                                <small id="mapperEmail-${patch.patch_id}-help" class="help-text">
-                                                    For coordination and updates (optional)
-                                                </small>
+                                                <input type="email" id="mapperEmail-${patch.patch_id}" placeholder="your@email.com">
                                             </div>
                                         </div>
                                     </section>
@@ -684,70 +621,37 @@
                                     <section class="form-section">
                                         <h5>📋 Patch Information</h5>
                                         <div class="info-grid">
-                                            <div class="info-item">
-                                                <strong>Country:</strong> ${patch.country_name || patch.country_code}
-                                            </div>
-                                            <div class="info-item">
-                                                <strong>Area:</strong> ${patch.area_km2 ? patch.area_km2.toFixed(2) + ' km²' : 'N/A'}
-                                            </div>
-                                            <div class="info-item">
-                                                <strong>Perimeter:</strong> ${patch.perimeter_km ? patch.perimeter_km.toFixed(2) + ' km' : 'N/A'}
-                                            </div>
-                                            <div class="info-item">
-                                                <strong>Reported Errors:</strong> ${patch.error_count || 0}
-                                            </div>
-                                            <div class="info-item">
-                                                <strong>Priority:</strong> ${patch.priority || 'Medium'}
-                                            </div>
-                                            <div class="info-item">
-                                                <strong>Difficulty:</strong> ${patch.difficulty || 'Medium'}
-                                            </div>
+                                            <div class="info-item"><strong>Country:</strong> ${patch.country_name || patch.country_code}</div>
+                                            <div class="info-item"><strong>Area:</strong> ${patch.area_km2 ? patch.area_km2.toFixed(2) + ' km²' : 'N/A'}</div>
+                                            <div class="info-item"><strong>Perimeter:</strong> ${patch.perimeter_km ? patch.perimeter_km.toFixed(2) + ' km' : 'N/A'}</div>
+                                            <div class="info-item"><strong>Reported Errors:</strong> ${patch.error_count || 0}</div>
+                                            <div class="info-item"><strong>Priority:</strong> ${patch.priority || 'Medium'}</div>
+                                            <div class="info-item"><strong>Difficulty:</strong> ${patch.difficulty || 'Medium'}</div>
                                         </div>
                                     </section>
                                     
                                     <section class="form-section">
                                         <h5>📝 Completion Notes</h5>
                                         <div class="form-group">
-                                            <label for="mappingNotes-${patch.patch_id}">
-                                                Notes about your mapping work (Optional)
-                                            </label>
-                                            <textarea id="mappingNotes-${patch.patch_id}" 
-                                                      placeholder="Add notes about features found, issues encountered, or other relevant information..."
-                                                      aria-describedby="mappingNotes-${patch.patch_id}-help"></textarea>
-                                            <small id="mappingNotes-${patch.patch_id}-help" class="help-text">
-                                                Help future mappers by describing what you found or any challenges
-                                            </small>
+                                            <label for="mappingNotes-${patch.patch_id}">Notes about your mapping work (Optional)</label>
+                                            <textarea id="mappingNotes-${patch.patch_id}" placeholder="Add notes about features found, issues encountered, or other relevant information..."></textarea>
                                         </div>
                                     </section>
                                 </div>
                                 
                                 <div class="action-buttons">
-                                    <button class="button load-button" 
-                                            onclick="loadPatchInJOSM('${patch.patch_id}', this); event.stopPropagation();"
-                                            aria-describedby="load-${patch.patch_id}-help">
+                                    <button class="button load-button" onclick="loadPatchInJOSM('${patch.patch_id}', this); event.stopPropagation();">
                                         🚀 <span>Load in JOSM</span>
                                     </button>
-                                    <button class="button complete-button" 
-                                            onclick="markPatchComplete('${patch.patch_id}'); event.stopPropagation();"
-                                            aria-describedby="complete-${patch.patch_id}-help">
+                                    <button class="button complete-button" onclick="markPatchComplete('${patch.patch_id}'); event.stopPropagation();">
                                         ✅ <span>Mark Complete</span>
                                     </button>
-                                    <button class="button overpass-button" 
-                                            onclick="openOverpassLink('${patch.patch_id}'); event.stopPropagation();"
-                                            aria-describedby="overpass-${patch.patch_id}-help">
+                                    <button class="button overpass-button" onclick="openOverpassLink('${patch.patch_id}'); event.stopPropagation();">
                                         🌐 <span>Open in Overpass</span>
                                     </button>
-                                    <button class="close-button" 
-                                            onclick="closePatchExpansion('${patch.patch_id}'); event.stopPropagation();"
-                                            aria-label="Close patch details">
+                                    <button class="close-button" onclick="closePatchExpansion('${patch.patch_id}'); event.stopPropagation();">
                                         ✕ <span>Close</span>
                                     </button>
-                                </div>
-                                
-                                <div class="help-tooltips">
-                                    <small id="load-${patch.patch_id}-help" class="help-text">Load patch boundaries in JOSM for mapping</small>
-                                    <small id="complete-${patch.patch_id}-help" class="help-text">Mark this patch as completed with your username</small>
-                                    <small id="overpass-${patch.patch_id}-help" class="help-text">Open Overpass Turbo with pre-filtered power infrastructure query</small>
                                 </div>
                                 
                                 <div id="progressLog-${patch.patch_id}" class="progress-log" role="log" aria-live="polite"></div>
@@ -758,16 +662,14 @@
             }).join('');
         }
 
-        // Keyboard navigation for patches
+        // Patch expansion
         function handlePatchKeydown(event, patchId) {
-            // Only handle Enter to expand patches - Space should work normally in form inputs
             if (event.key === 'Enter') {
                 event.preventDefault();
                 togglePatchExpansion(patchId);
             }
         }
 
-        // Patch expansion with better accessibility
         function togglePatchExpansion(patchId) {
             const patchElement = document.getElementById(`patch-${patchId}`);
             const overlay = document.getElementById('patchOverlay');
@@ -776,17 +678,14 @@
             
             const isExpanded = patchElement.classList.contains('expanded');
             
-            // Close all expanded patches first
             closeAllPatches();
             
-            // Toggle current patch if it wasn't already expanded
             if (!isExpanded) {
                 patchElement.classList.add('expanded');
                 patchElement.setAttribute('aria-expanded', 'true');
                 overlay.classList.add('active');
                 document.body.style.overflow = 'hidden';
                 
-                // Focus the first input in the expanded patch
                 setTimeout(() => {
                     const firstInput = patchElement.querySelector('input[type="text"]');
                     if (firstInput) firstInput.focus();
@@ -803,12 +702,10 @@
             if (patchElement) {
                 patchElement.classList.remove('expanded');
                 patchElement.setAttribute('aria-expanded', 'false');
-                patchElement.focus(); // Return focus to the patch card
+                patchElement.focus();
             }
             overlay.classList.remove('active');
             document.body.style.overflow = '';
-            
-            logProgress(`Closed patch ${patchId}`, 'info');
         }
         
         function closeAllPatches() {
@@ -821,41 +718,12 @@
             document.body.style.overflow = '';
         }
 
-        // Progress logging for patches
-        function logProgressForPatch(patchId, message, type = 'info') {
-            const log = document.getElementById(`progressLog-${patchId}`);
-            if (!log) return;
-            
-            const entry = document.createElement('div');
-            entry.className = `log-entry log-${type}`;
-            entry.setAttribute('role', 'status');
-            
-            const timestamp = new Date().toLocaleTimeString();
-            entry.innerHTML = `
-                <span class="log-timestamp">[${timestamp}]</span>
-                <span class="log-message">${message}</span>
-            `;
-            
-            log.appendChild(entry);
-            log.scrollTop = log.scrollHeight;
-            log.classList.add('active');
-            
-            // Limit entries per patch log
-            const entries = log.querySelectorAll('.log-entry');
-            if (entries.length > 20) {
-                entries[0].remove();
-            }
-            
-            console.log(`[${type.toUpperCase()}] Patch ${patchId}: ${message}`);
-        }
-
-        // JOSM and patch loading
+        // Get patch details
         async function getPatchDetails(patchId) {
             try {
                 logProgressForPatch(patchId, 'Fetching patch geometry...', 'info');
                 
-                const patchQuery = `/osmose_patches?select=*&patch_id=eq.${patchId}&limit=1`;
-                const patches = await supabaseQuery(patchQuery);
+                const patches = await supabaseQuery(`/osmose_patches?select=*&patch_id=eq.${patchId}&limit=1`);
                 
                 if (patches.length === 0) {
                     throw new Error('Patch not found in database');
@@ -868,7 +736,7 @@
                     try {
                         const geom = typeof patch.geometry === 'string' ? JSON.parse(patch.geometry) : patch.geometry;
                         
-                        if (geom && geom.coordinates) {
+                        if (geom?.coordinates) {
                             let allCoords = [];
                             if (geom.type === 'Polygon') {
                                 allCoords = geom.coordinates[0];
@@ -897,15 +765,10 @@
                 
                 if (!bbox) {
                     logProgressForPatch(patchId, 'Using fallback coordinates', 'warning');
-                    bbox = {
-                        min_lat: 48.0,
-                        min_lon: 67.0,
-                        max_lat: 48.02,
-                        max_lon: 67.02
-                    };
+                    bbox = { min_lat: 48.0, min_lon: 67.0, max_lat: 48.02, max_lon: 67.02 };
                 }
                 
-                // Add padding for better mapping context
+                // Add padding for mapping context
                 const padding = 0.002;
                 bbox.min_lat -= padding;
                 bbox.min_lon -= padding;
@@ -920,147 +783,167 @@
             }
         }
         
-        async function loadJOSMDirect(bbox, patchId) {
-            const params = new URLSearchParams({
-                left: bbox.min_lon.toFixed(6),
-                right: bbox.max_lon.toFixed(6),
-                top: bbox.max_lat.toFixed(6),
-                bottom: bbox.min_lat.toFixed(6),
-                new_layer: 'true',
-                layer_name: `Patch ${patchId} - Boundaries`
-            });
+        // Create boundary rectangle using JOSM Remote Control
+        async function createBoundaryInJOSM(bbox, patchId) {
+            logProgressForPatch(patchId, 'Creating boundary rectangle in JOSM...', 'info');
             
-            logProgressForPatch(patchId, 'Loading patch boundaries in JOSM...', 'info');
-            
-            const response = await fetch(`${CONFIG.JOSM_BASE_URL}/load_and_zoom?${params}`, {
-                method: 'GET',
-                signal: AbortSignal.timeout(CONFIG.JOSM_TIMEOUT)
-            });
-            
-            if (!response.ok) {
-                throw new Error(`JOSM responded with HTTP ${response.status}: ${response.statusText}`);
+            try {
+                // Method 1: Try load_data command to create new layer with boundary OSM data
+                try {
+                    const boundaryXML = createBoundaryOSMXML(bbox, patchId);
+                    const encodedData = encodeURIComponent(boundaryXML);
+                    
+                    const loadDataUrl = `${CONFIG.JOSM_BASE_URL}/load_data?` +
+                        `new_layer=true&` +
+                        `layer_name=${encodeURIComponent(`Patch ${patchId} - BOUNDARY (DO NOT UPLOAD)`)}&` +
+                        `data=${encodedData}`;
+                    
+                    const loadResponse = await fetch(loadDataUrl, {
+                        method: 'GET',
+                        signal: AbortSignal.timeout(CONFIG.JOSM_TIMEOUT)
+                    });
+                    
+                    if (loadResponse.ok) {
+                        logProgressForPatch(patchId, 'Boundary rectangle created via load_data', 'success');
+                        return true;
+                    } else {
+                        throw new Error('load_data failed, trying add_way');
+                    }
+                    
+                } catch (loadDataError) {
+                    logProgressForPatch(patchId, 'Trying alternative method...', 'info');
+                    
+                    // Method 2: Fallback to add_way command (requires "Create new objects" permission)
+                    // Coordinate format: lat,lon;lat,lon;lat,lon;lat,lon;lat,lon (semicolon separated, closed)
+                    const wayCoords = [
+                        `${bbox.min_lat},${bbox.min_lon}`, // Bottom-left
+                        `${bbox.min_lat},${bbox.max_lon}`, // Bottom-right
+                        `${bbox.max_lat},${bbox.max_lon}`, // Top-right  
+                        `${bbox.max_lat},${bbox.min_lon}`, // Top-left
+                        `${bbox.min_lat},${bbox.min_lon}`  // Back to bottom-left (close)
+                    ].join(';');
+                    
+                    const addWayUrl = `${CONFIG.JOSM_BASE_URL}/add_way?way=${wayCoords}&addtags=boundary=patch|name=Patch ${patchId} Boundary|note=DO NOT UPLOAD - Visual boundary only`;
+                    
+                    const wayResponse = await fetch(addWayUrl, {
+                        method: 'GET',
+                        signal: AbortSignal.timeout(CONFIG.JOSM_TIMEOUT)
+                    });
+                    
+                    if (!wayResponse.ok) {
+                        const responseText = await wayResponse.text();
+                        if (responseText.includes('permission') || wayResponse.status === 403) {
+                            throw new Error('Failed to create boundary. Please enable "Create new objects" permission in JOSM Remote Control preferences (Edit → Preferences → Remote Control → Permissions).');
+                        } else {
+                            throw new Error(`Failed to create boundary way (HTTP ${wayResponse.status}): ${responseText}`);
+                        }
+                    }
+                    
+                    logProgressForPatch(patchId, 'Boundary rectangle created via add_way', 'success');
+                    return true;
+                }
+                
+            } catch (error) {
+                logProgressForPatch(patchId, `Boundary creation failed: ${error.message}`, 'error');
+                throw error;
             }
-            
-            logProgressForPatch(patchId, 'Patch boundaries loaded successfully', 'success');
-            return true;
         }
 
-        // Comprehensive Overpass query adapted for bounding boxes
+        // Generate OSM XML for boundary rectangle
+        function createBoundaryOSMXML(bbox, patchId) {
+            const nodes = [
+                { id: -1, lat: bbox.min_lat, lon: bbox.min_lon }, // Bottom-left
+                { id: -2, lat: bbox.min_lat, lon: bbox.max_lon }, // Bottom-right  
+                { id: -3, lat: bbox.max_lat, lon: bbox.max_lon }, // Top-right
+                { id: -4, lat: bbox.max_lat, lon: bbox.min_lon }  // Top-left
+            ];
+            
+            return `<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6" generator="Game of Grids">
+${nodes.map(node => 
+    `  <node id="${node.id}" lat="${node.lat.toFixed(7)}" lon="${node.lon.toFixed(7)}" version="1">
+    <tag k="note" v="Patch ${patchId} boundary corner - DO NOT UPLOAD"/>
+  </node>`
+).join('\n')}
+  <way id="-5" version="1">
+${nodes.map(node => `    <nd ref="${node.id}"/>`).join('\n')}
+    <nd ref="-1"/>
+    <tag k="boundary" v="patch"/>
+    <tag k="name" v="Patch ${patchId} Boundary"/>
+    <tag k="note" v="Visual boundary only - DO NOT UPLOAD TO OSM"/>
+    <tag k="fixme" v="This is a mapping boundary marker, not real OSM data"/>
+  </way>
+</osm>`;
+        }
+
+        // Overpass query for power infrastructure
         function createOverpassQuery(bbox) {
-            // Adapted from admin2.overpassql to work with bounding boxes instead of areas
             return `[out:xml][timeout:180];
 (
-  // Get towers, poles, and portals
   node["power"="tower"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
   node["power"="pole"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
   node["power"="portal"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
-  
-  // Get lines and cables
   way["power"="line"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
   way["power"="cable"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
-  
-  // Get substations (nodes, ways, and relations)
   node["power"="substation"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
   way["power"="substation"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
   relation["power"="substation"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
-  
-  // Get power plants
   node["power"="plant"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
   way["power"="plant"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
   relation["power"="plant"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
-  
-  // Get generators
   node["power"="generator"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
   way["power"="generator"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
   relation["power"="generator"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
-  
-  // Get transformers
   node["power"="transformer"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
   way["power"="transformer"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
   relation["power"="transformer"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
-  
-  // Get construction power infrastructure
   node["construction:power"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
   way["construction:power"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
   relation["construction:power"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
 );
-// Output all elements with metadata
 out meta;
-// Recursively fetch all member nodes
 >;
-// Output the complete geometry with metadata
 out meta qt;`;
         }
 
+        // Load power infrastructure from Overpass
         async function loadOverpassDataInJOSM(bbox, patchId) {
             const overpassQL = createOverpassQuery(bbox);
-            const overpassUrl =
-                'https://overpass-api.de/api/interpreter?' +
+            const overpassUrl = 'https://overpass-api.de/api/interpreter?' + 
                 new URLSearchParams({ data: overpassQL }).toString();
 
             const josmImportUrl = `${CONFIG.JOSM_BASE_URL}/import?` +
                 new URLSearchParams({
                     new_layer: 'true',
                     layer_name: `Patch ${patchId} - Power Infrastructure`
-                }).toString() +
-                '&url=' + encodeURIComponent(overpassUrl);
+                }).toString() + '&url=' + encodeURIComponent(overpassUrl);
 
-            logProgressForPatch(patchId, 'Sending Overpass URL to JOSM…', 'info');
+            logProgressForPatch(patchId, 'Loading power infrastructure from Overpass...', 'info');
 
             try {
-                // 1) Import into new layer
                 const importResponse = await fetch(josmImportUrl, {
                     method: 'GET',
-                    signal: AbortSignal.timeout(CONFIG.JOSM_TIMEOUT)
+                    signal: AbortSignal.timeout(CONFIG.OVERPASS_TIMEOUT)
                 });
+                
                 if (!importResponse.ok) {
-                    throw new Error(`JOSM /import failed (HTTP ${importResponse.status})`);
+                    throw new Error(`JOSM import failed (HTTP ${importResponse.status})`);
                 }
-                logProgressForPatch(patchId, '✓ Power data imported', 'success');
-
-                // 2) Zoom to the same bounding box
-                const zoomParams = new URLSearchParams({
-                    left: bbox.min_lon.toFixed(6),
-                    right: bbox.max_lon.toFixed(6),
-                    top: bbox.max_lat.toFixed(6),
-                    bottom: bbox.min_lat.toFixed(6)
-                }).toString();
-
-                const josmZoomUrl = `${CONFIG.JOSM_BASE_URL}/zoom?${zoomParams}`;
-                const zoomResponse = await fetch(josmZoomUrl, {
-                    method: 'GET',
-                    signal: AbortSignal.timeout(CONFIG.JOSM_TIMEOUT)
-                });
-                if (!zoomResponse.ok) {
-                    throw new Error(`JOSM /zoom failed (HTTP ${zoomResponse.status})`);
-                }
-                logProgressForPatch(patchId, '✓ Zoomed to power infrastructure layer', 'success');
-
+                
+                logProgressForPatch(patchId, '✓ Power infrastructure loaded', 'success');
                 return true;
 
             } catch (err) {
-                logProgressForPatch(
-                    patchId,
-                    `⚠️ Overpass import/zoom failed (${err.message}), falling back…`,
-                    'warning'
-                );
-                return fallbackBrowserImport(overpassQL, patchId);
+                logProgressForPatch(patchId, `⚠️ Overpass import failed: ${err.message}`, 'warning');
+                return false;
             }
         }
-
-
         
+        // Main patch loading function
         async function loadPatchInJOSM(patchId, buttonElement) {
             const mapperId = document.getElementById(`mapperId-${patchId}`).value.trim();
             if (!mapperId) {
                 toast.show('Please enter your OpenStreetMap username before loading the patch.', 'warning');
-                document.getElementById(`mapperId-${patchId}`).focus();
-                return;
-            }
-            
-            // Allow any characters including spaces in username
-            if (mapperId.length < 1) {
-                toast.show('Username cannot be empty.', 'warning');
                 document.getElementById(`mapperId-${patchId}`).focus();
                 return;
             }
@@ -1070,7 +953,7 @@ out meta qt;`;
             buttonElement.disabled = true;
             
             try {
-                logProgressForPatch(patchId, `Starting comprehensive patch load for ${mapperId}`, 'info');
+                logProgressForPatch(patchId, `Starting patch load for ${mapperId}`, 'info');
                 
                 const patchData = await getPatchDetails(patchId);
                 
@@ -1078,7 +961,7 @@ out meta qt;`;
                     throw new Error('Could not determine patch coordinates');
                 }
                 
-                logProgressForPatch(patchId, `Patch area: ${Object.values(patchData.bbox).map(v => v.toFixed(6)).join(', ')}`, 'info');
+                logProgressForPatch(patchId, `Patch coordinates: ${Object.values(patchData.bbox).map(v => v.toFixed(6)).join(', ')}`, 'info');
                 
                 const josmStatus = await testJOSM();
                 if (!josmStatus.connected) {
@@ -1087,16 +970,21 @@ out meta qt;`;
                 
                 logProgressForPatch(patchId, 'JOSM connection verified ✓', 'success');
                 
-                // Step 1: Load patch boundaries
-                buttonElement.innerHTML = '📍 <span>Loading Boundaries...</span>';
-                await loadJOSMDirect(patchData.bbox, patchId);
+                // Step 1: Create boundary rectangle (no OSM download)
+                buttonElement.innerHTML = '📍 <span>Creating Boundary...</span>';
+                await createBoundaryInJOSM(patchData.bbox, patchId);
                 
                 // Step 2: Load power infrastructure data from Overpass
                 buttonElement.innerHTML = '🔌 <span>Loading Power Data...</span>';
-                await loadOverpassDataInJOSM(patchData.bbox, patchId);
+                const powerDataLoaded = await loadOverpassDataInJOSM(patchData.bbox, patchId);
                 
-                logProgressForPatch(patchId, '🎉 Complete! Patch boundaries and power infrastructure loaded in JOSM', 'success');
-                toast.show(`Patch ${patchId} fully loaded in JOSM with power infrastructure data for ${mapperId}`, 'success');
+                if (powerDataLoaded) {
+                    logProgressForPatch(patchId, '🎉 Complete! Boundary created and power infrastructure loaded', 'success');
+                    toast.show(`Patch ${patchId} loaded in JOSM with boundary rectangle and power data for ${mapperId}`, 'success');
+                } else {
+                    logProgressForPatch(patchId, '⚠️ Boundary created, but power data failed to load', 'warning');
+                    toast.show(`Patch ${patchId} boundary created, but power data failed to load. You can manually download OSM data.`, 'warning');
+                }
                 
             } catch (error) {
                 logProgressForPatch(patchId, `❌ Error: ${error.message}`, 'error');
@@ -1107,18 +995,11 @@ out meta qt;`;
             }
         }
 
-        // Completion workflow
+        // Mark patch complete
         async function markPatchComplete(patchId) {
             const mapperId = document.getElementById(`mapperId-${patchId}`).value.trim();
             if (!mapperId) {
                 toast.show('Please enter your OpenStreetMap username before marking complete.', 'warning');
-                document.getElementById(`mapperId-${patchId}`).focus();
-                return;
-            }
-            
-            // Allow any characters including spaces in username
-            if (mapperId.length < 1) {
-                toast.show('Username cannot be empty.', 'warning');
                 document.getElementById(`mapperId-${patchId}`).focus();
                 return;
             }
@@ -1133,9 +1014,7 @@ out meta qt;`;
             try {
                 logProgressForPatch(patchId, 'Checking completion status...', 'info');
                 
-                // Check if already completed
-                const existingQuery = `/patch_assignments?select=status,mapper_id,completed_at&patch_id=eq.${patchId}&status=eq.completed&limit=1`;
-                const existing = await supabaseQuery(existingQuery);
+                const existing = await supabaseQuery(`/patch_assignments?select=status,mapper_id,completed_at&patch_id=eq.${patchId}&status=eq.completed&limit=1`);
                 
                 if (existing.length > 0) {
                     const existingAssignment = existing[0];
@@ -1146,7 +1025,6 @@ out meta qt;`;
                 
                 logProgressForPatch(patchId, 'Creating completion record...', 'info');
                 
-                // Create completion record with data
                 const completionData = {
                     patch_id: patchId,
                     mapper_id: mapperId,
@@ -1155,7 +1033,7 @@ out meta qt;`;
                     assigned_at: new Date().toISOString(),
                     completed_at: new Date().toISOString(),
                     completion_notes: mappingNotes || null,
-                    app_version: '2.0.1' // Track which version was used
+                    app_version: '2.1.0'
                 };
                 
                 await supabaseQuery('/patch_assignments', {
@@ -1166,11 +1044,8 @@ out meta qt;`;
                 logProgressForPatch(patchId, '🎉 Marked as completed!', 'success');
                 toast.show(`Patch ${patchId} completed by ${mapperId}!`, 'success');
                 
-                // Close expansion and refresh
                 closePatchExpansion(patchId);
-                setTimeout(() => {
-                    loadPatches();
-                }, 1500);
+                setTimeout(() => loadPatches(), 1500);
                 
             } catch (error) {
                 console.error('Error marking patch complete:', error);
@@ -1179,25 +1054,21 @@ out meta qt;`;
             }
         }
 
-        // Fixed Overpass integration for manual viewing
+        // Open in Overpass Turbo
         async function openOverpassLink(patchId) {
             try {
                 const patchData = await getPatchDetails(patchId);
                 const bbox = patchData.bbox;
                 
-                // Use the comprehensive query for Overpass Turbo
                 const overpassQuery = createOverpassQuery(bbox);
-                
-                // Overpass Turbo expects the query in a specific format
-                const turboQuery = `/* Power Infrastructure for Patch ${patchId} */
-${overpassQuery}`;
+                const turboQuery = `/* Power Infrastructure for Patch ${patchId} */\n${overpassQuery}`;
                 
                 const encodedQuery = encodeURIComponent(turboQuery);
                 const overpassUrl = `https://overpass-turbo.eu/?Q=${encodedQuery}&R`;
                 
                 window.open(overpassUrl, '_blank');
-                logProgressForPatch(patchId, 'Opened comprehensive power infrastructure query in Overpass Turbo', 'success');
-                toast.show('Opened patch in Overpass Turbo with full power infrastructure query', 'info');
+                logProgressForPatch(patchId, 'Opened in Overpass Turbo', 'success');
+                toast.show('Opened patch in Overpass Turbo', 'info');
                 
             } catch (error) {
                 logProgressForPatch(patchId, `Overpass error: ${error.message}`, 'error');
@@ -1205,7 +1076,7 @@ ${overpassQuery}`;
             }
         }
 
-        // Test functions for main page
+        // Test functions
         async function testJOSM() {
             try {
                 const response = await fetch(`${CONFIG.JOSM_BASE_URL}/version`, { 
@@ -1240,7 +1111,7 @@ ${overpassQuery}`;
             const testBbox = { min_lat: 48.0, min_lon: 67.0, max_lat: 48.01, max_lon: 67.01 };
             const testQuery = createOverpassQuery(testBbox);
 
-            console.log('🧪 Testing Overpass API with comprehensive power query...');
+            console.log('🧪 Testing Overpass API...');
             const startTime = Date.now();
             
             try {
@@ -1250,7 +1121,7 @@ ${overpassQuery}`;
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: new URLSearchParams({ data: testQuery }),
-                    signal: AbortSignal.timeout(30000) // 30 second timeout for test
+                    signal: AbortSignal.timeout(30000)
                 });
                 
                 const responseTime = Date.now() - startTime;
@@ -1261,73 +1132,30 @@ ${overpassQuery}`;
                     const ways = (osmData.match(/<way/g) || []).length;
                     const relations = (osmData.match(/<relation/g) || []).length;
                     
-                    // Count specific power infrastructure types
-                    const towers = (osmData.match(/power.*=.*tower/g) || []).length;
-                    const poles = (osmData.match(/power.*=.*pole/g) || []).length;
-                    const lines = (osmData.match(/power.*=.*line/g) || []).length;
-                    const substations = (osmData.match(/power.*=.*substation/g) || []).length;
-                    
                     const message = `✅ Overpass API Test Successful
 
 ⏱️ Response time: ${responseTime}ms
-📊 Power infrastructure found in test area:
-  • ${nodes} total nodes
-  • ${ways} total ways  
-  • ${relations} total relations
-  
-🗼 Infrastructure breakdown:
-  • ${towers} towers
-  • ${poles} poles
-  • ${lines} power lines
-  • ${substations} substations
-  
+📊 Found: ${nodes} nodes, ${ways} ways, ${relations} relations
 📦 Data size: ${(osmData.length / 1024).toFixed(1)} KB
 
-🎯 The API is responding normally with comprehensive power data.`;
+The API is responding normally.`;
 
                     alert(message);
                     toast.show('Overpass API test successful', 'success');
                 } else {
                     const errorText = await response.text();
-                    const errorMsg = `❌ Overpass API Test Failed
-
-❌ HTTP Error: ${response.status} ${response.statusText}
-⏱️ Response time: ${responseTime}ms
-📝 Error details: ${errorText.substring(0, 200)}${errorText.length > 200 ? '...' : ''}
-
-The Overpass API returned an error. This might be due to:
-• Server overload (try again later)
-• Query syntax error
-• Timeout on complex query
-
-Try again later or use JOSM's standard download feature.`;
-                    
-                    alert(errorMsg);
+                    alert(`❌ Overpass API Error: ${response.status}\n${errorText.substring(0, 200)}`);
                     toast.show('Overpass API test failed', 'error');
                 }
                 
             } catch (error) {
-                const responseTime = Date.now() - startTime;
-                const errorMsg = `❌ Overpass API Test Failed
-
-❌ Connection failed: ${error.message}
-⏱️ Response time: ${responseTime}ms
-
-Possible causes:
-• Network connection issues
-• Overpass API server down
-• Query timeout (complex query)
-
-Check your internet connection or try again later.`;
-                
-                alert(errorMsg);
+                alert(`❌ Overpass Test Failed: ${error.message}`);
                 toast.show(`Overpass test failed: ${error.message}`, 'error');
             } finally {
                 hideProgressIndicator();
             }
         }
 
-        // JOSM test for main page
         window.testJOSMButton = async function() {
             showProgressIndicator('Testing JOSM connection...');
             
@@ -1341,31 +1169,23 @@ Check your internet connection or try again later.`;
 📡 Remote Control: Active
 🌐 Port 8111: Accessible
 
-🎯 Ready for patch loading!`;
+Ready for patch loading!`;
                     
                     alert(message);
                     toast.show('JOSM connection verified', 'success');
                 } else {
                     const message = `❌ JOSM Connection Failed
 
-💡 Error: ${result.error}
+Error: ${result.error}
 
-🔧 Troubleshooting Steps:
+Troubleshooting:
 1. Ensure JOSM is running
-2. Enable remote control:
-   Edit → Preferences → Remote Control
+2. Enable remote control: Edit → Preferences → Remote Control
 3. Check "Enable remote control"
 4. Restart JOSM after enabling
-5. Verify no firewall blocking port 8111
-6. Try running JOSM as administrator
-
-${result.help ? '\n💡 ' + result.help : ''}`;
+5. Verify no firewall blocking port 8111`;
                     
-                    const openHelp = confirm(message + '\n\nOpen JOSM help documentation?');
-                    if (openHelp) {
-                        window.open('https://josm.openstreetmap.de/wiki/Help/Preferences/RemoteControl', '_blank');
-                    }
-                    
+                    alert(message);
                     toast.show('JOSM connection failed', 'error');
                 }
             } finally {
@@ -1373,89 +1193,44 @@ ${result.help ? '\n💡 ' + result.help : ''}`;
             }
         };
         
-        // Debug function
         async function debugDatabase() {
             try {
                 showProgressIndicator('Gathering debug information...');
-                updateConnectionStatus(true, 'Querying...');
                 
-                // Comprehensive database statistics
-                const countriesQuery = '/osmose_patches?select=country_code,country_name&limit=2000';
-                const allPatches = await supabaseQuery(countriesQuery);
+                const allPatches = await supabaseQuery('/osmose_patches?select=country_code,country_name&limit=1000');
+                const completedPatches = await supabaseQuery('/patch_assignments?select=patch_id,status&status=eq.completed');
                 
-                // Statistics
                 const countryCounts = {};
-                const countryNames = {};
                 allPatches.forEach(patch => {
                     const code = patch.country_code;
                     countryCounts[code] = (countryCounts[code] || 0) + 1;
-                    if (patch.country_name) {
-                        countryNames[code] = patch.country_name;
-                    }
                 });
                 
                 const topCountries = Object.entries(countryCounts)
                     .sort(([,a], [,b]) => b - a)
-                    .slice(0, 20);
-                
-                // Get completion statistics
-                const completedQuery = '/patch_assignments?select=patch_id,status&status=eq.completed';
-                const completedPatches = await supabaseQuery(completedQuery);
-                
-                // Recent activity
-                const recentQuery = '/patch_assignments?select=mapper_id,completed_at&status=eq.completed&order=completed_at.desc&limit=10';
-                const recentActivity = await supabaseQuery(recentQuery);
-                
-                // Sample patches with more details
-                const sampleQuery = '/osmose_patches?select=patch_id,country_code,error_count,area_km2,priority,difficulty&limit=8';
-                const samplePatches = await supabaseQuery(sampleQuery);
+                    .slice(0, 10);
                 
                 let message = '🔍 Database Debug Information\n\n';
-                
-                message += `📊 Database Statistics:\n`;
+                message += `📊 Statistics:\n`;
                 message += `  Total patches: ${allPatches.length.toLocaleString()}\n`;
-                message += `  Completed patches: ${completedPatches.length.toLocaleString()}\n`;
+                message += `  Completed: ${completedPatches.length.toLocaleString()}\n`;
                 message += `  Completion rate: ${((completedPatches.length / allPatches.length) * 100).toFixed(1)}%\n\n`;
                 
-                if (topCountries.length > 0) {
-                    message += '🌍 Top Countries with Patches:\n';
-                    topCountries.forEach(([code, count]) => {
-                        const name = countryNames[code] || code;
-                        const percentage = ((count / allPatches.length) * 100).toFixed(1);
-                        message += `  ${code} (${name}): ${count.toLocaleString()} patches (${percentage}%)\n`;
-                    });
-                }
+                message += '🌍 Top Countries:\n';
+                topCountries.forEach(([code, count]) => {
+                    message += `  ${code}: ${count.toLocaleString()} patches\n`;
+                });
                 
-                if (recentActivity.length > 0) {
-                    message += '\n🚀 Recent Completions:\n';
-                    recentActivity.slice(0, 5).forEach(activity => {
-                        const date = new Date(activity.completed_at).toLocaleDateString();
-                        message += `  ${activity.mapper_id} on ${date}\n`;
-                    });
-                }
-                
-                message += `\n🔧 Technical Information:\n`;
-                message += `  Frontend version: 2.0.1 (Fixed Overpass)\n`;
-                message += `  API endpoint: ${CONFIG.SUPABASE_URL}\n`;
-                message += `  Connection retries: ${CONFIG.MAX_RETRIES}\n`;
-                message += `  Last refresh: ${new Date(AppState.lastRefresh).toLocaleTimeString()}\n`;
+                message += `\n🔧 Technical Info:\n`;
+                message += `  Version: 2.1.0 (Boundary Rectangle)\n`;
+                message += `  Connection: ${AppState.connectionStatus}\n`;
                 message += `  Theme: ${AppState.theme}\n`;
                 
-                if (samplePatches.length > 0) {
-                    message += '\n📝 Sample Patches:\n';
-                    samplePatches.forEach(p => {
-                        message += `  ${p.patch_id} (${p.country_code}): ${p.error_count || 0} errors, ${p.difficulty || 'Medium'} difficulty\n`;
-                    });
-                }
-                
                 alert(message);
-                updateConnectionStatus(true);
                 toast.show('Debug information collected', 'info');
                 
             } catch (error) {
-                console.error('Debug failed:', error);
-                updateConnectionStatus(false, 'Debug Error');
-                alert(`❌ Debug failed: ${error.message}\n\nCheck console for more details.`);
+                alert(`❌ Debug failed: ${error.message}`);
                 toast.show(`Debug failed: ${error.message}`, 'error');
             } finally {
                 hideProgressIndicator();
@@ -1464,25 +1239,13 @@ ${result.help ? '\n💡 ' + result.help : ''}`;
 
         // Keyboard shortcuts
         document.addEventListener('keydown', function(event) {
-            // Don't trigger shortcuts when typing in inputs, textareas, or any editable content
-            if (event.target.tagName === 'INPUT' || 
-                event.target.tagName === 'TEXTAREA' || 
-                event.target.isContentEditable ||
-                event.target.closest('input') ||
-                event.target.closest('textarea')) {
+            if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' || event.target.isContentEditable) {
                 return;
             }
             
             switch(event.key) {
                 case 'Escape':
                     closeAllPatches();
-                    break;
-                case ' ': // Space key
-                    // Only close patches if space is pressed outside of input fields
-                    if (!event.target.closest('.patch-expanded-content')) {
-                        event.preventDefault();
-                        closeAllPatches();
-                    }
                     break;
                 case 'r':
                 case 'R':
@@ -1519,15 +1282,10 @@ ${result.help ? '\n💡 ' + result.help : ''}`;
         window.addEventListener('load', async () => {
             updateConnectionStatus(false, 'Connecting...');
             
-            // Initialize theme
-            themeManager.applyTheme(AppState.theme);
-            
-            // Set up theme toggle
             document.getElementById('themeToggle').addEventListener('click', () => {
                 themeManager.toggle();
             });
             
-            // Test initial connection with retry logic
             let connected = false;
             for (let attempt = 1; attempt <= 3 && !connected; attempt++) {
                 connected = await testConnection();
@@ -1546,23 +1304,16 @@ ${result.help ? '\n💡 ' + result.help : ''}`;
                         <div class="error-icon">❌</div>
                         <h3>Database connection failed</h3>
                         <p>Unable to connect after multiple attempts.</p>
-                        <p>Please check your internet connection and try refreshing the page.</p>
                         <button onclick="window.location.reload()" class="button refresh-button">🔄 Reload Page</button>
                     </div>`;
                 toast.show('Failed to connect to database', 'error');
             }
         });
         
-        // Auto-refresh with exponential backoff
-        let refreshInterval = CONFIG.REFRESH_INTERVAL;
+        // Auto-refresh
         setInterval(() => {
-            if (Date.now() - AppState.lastRefresh > refreshInterval && !AppState.isLoading) {
-                if (AppState.connectionStatus === 'online') {
-                    loadPatches();
-                    refreshInterval = CONFIG.REFRESH_INTERVAL; // Reset interval on success
-                } else {
-                    refreshInterval = Math.min(refreshInterval * 1.5, 600000); // Max 10 minutes
-                }
+            if (Date.now() - AppState.lastRefresh > CONFIG.REFRESH_INTERVAL && !AppState.isLoading && AppState.connectionStatus === 'online') {
+                loadPatches();
             }
         }, 60000);
         
@@ -1579,13 +1330,6 @@ ${result.help ? '\n💡 ' + result.help : ''}`;
             updateConnectionStatus(false, 'No Internet');
             toast.show('Connection lost', 'warning');
         });
-
-        // Service worker registration for offline support (optional)
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').catch(err => {
-                console.log('Service worker registration failed:', err);
-            });
-        }
     </script>
 </body>
 </html>
