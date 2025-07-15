@@ -945,44 +945,110 @@
             return true;
         }
 
-        // Fixed and simplified Overpass query generation
+        // Comprehensive Overpass query adapted for bounding boxes
         function createOverpassQuery(bbox) {
-            // Simplified but comprehensive power infrastructure query
+            // Adapted from admin2.overpassql to work with bounding boxes instead of areas
             return `[out:xml][timeout:180];
 (
-  node["power"~"^(tower|pole|portal|substation|plant|generator|transformer)$"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
-  way["power"~"^(line|cable|substation|plant|generator|transformer)$"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
-  relation["power"~"^(substation|plant|generator)$"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
+  // Get towers, poles, and portals
+  node["power"="tower"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
+  node["power"="pole"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
+  node["power"="portal"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
+  
+  // Get lines and cables
+  way["power"="line"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
+  way["power"="cable"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
+  
+  // Get substations (nodes, ways, and relations)
+  node["power"="substation"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
+  way["power"="substation"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
+  relation["power"="substation"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
+  
+  // Get power plants
+  node["power"="plant"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
+  way["power"="plant"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
+  relation["power"="plant"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
+  
+  // Get generators
+  node["power"="generator"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
+  way["power"="generator"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
+  relation["power"="generator"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
+  
+  // Get transformers
+  node["power"="transformer"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
+  way["power"="transformer"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
+  relation["power"="transformer"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
+  
+  // Get construction power infrastructure
+  node["construction:power"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
+  way["construction:power"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
+  relation["construction:power"](${bbox.min_lat},${bbox.min_lon},${bbox.max_lat},${bbox.max_lon});
 );
+// Output all elements with metadata
 out meta;
+// Recursively fetch all member nodes
 >;
-out meta skel qt;`;
+// Output the complete geometry with metadata
+out meta qt;`;
         }
 
         async function loadOverpassDataInJOSM(bbox, patchId) {
-            const overpassQuery = createOverpassQuery(bbox);
-            
-            logProgressForPatch(patchId, 'Querying Overpass API for power infrastructure...', 'info');
+            const overpassQL = createOverpassQuery(bbox);
+            const overpassUrl =
+                'https://overpass-api.de/api/interpreter?' +
+                new URLSearchParams({ data: overpassQL }).toString();
 
-            // Create a properly encoded URL for the Overpass query
-            const overpassUrl = `https://overpass-api.de/api/interpreter`;
-            const encodedQuery = encodeURIComponent(overpassQuery);
+            const josmImportUrl = `${CONFIG.JOSM_BASE_URL}/import?` +
+                new URLSearchParams({
+                    new_layer: 'true',
+                    layer_name: `Patch ${patchId} - Power Infrastructure`
+                }).toString() +
+                '&url=' + encodeURIComponent(overpassUrl);
 
-            // Send Overpass query directly to JOSM via import command
-            const importUrl = `${CONFIG.JOSM_BASE_URL}/import?url=${encodeURIComponent(overpassUrl + '?data=' + encodedQuery)}&new_layer=true&layer_name=${encodeURIComponent(`Patch ${patchId} - Power Infrastructure`)}`;
+            logProgressForPatch(patchId, 'Sending Overpass URL to JOSM…', 'info');
 
-            const response = await fetch(importUrl, {
-                method: 'GET',
-                signal: AbortSignal.timeout(CONFIG.OVERPASS_TIMEOUT)
-            });
+            try {
+                // 1) Import into new layer
+                const importResponse = await fetch(josmImportUrl, {
+                    method: 'GET',
+                    signal: AbortSignal.timeout(CONFIG.JOSM_TIMEOUT)
+                });
+                if (!importResponse.ok) {
+                    throw new Error(`JOSM /import failed (HTTP ${importResponse.status})`);
+                }
+                logProgressForPatch(patchId, '✓ Power data imported', 'success');
 
-            if (!response.ok) {
-                throw new Error(`JOSM import failed with HTTP ${response.status}: ${response.statusText}`);
+                // 2) Zoom to the same bounding box
+                const zoomParams = new URLSearchParams({
+                    left: bbox.min_lon.toFixed(6),
+                    right: bbox.max_lon.toFixed(6),
+                    top: bbox.max_lat.toFixed(6),
+                    bottom: bbox.min_lat.toFixed(6)
+                }).toString();
+
+                const josmZoomUrl = `${CONFIG.JOSM_BASE_URL}/zoom?${zoomParams}`;
+                const zoomResponse = await fetch(josmZoomUrl, {
+                    method: 'GET',
+                    signal: AbortSignal.timeout(CONFIG.JOSM_TIMEOUT)
+                });
+                if (!zoomResponse.ok) {
+                    throw new Error(`JOSM /zoom failed (HTTP ${zoomResponse.status})`);
+                }
+                logProgressForPatch(patchId, '✓ Zoomed to power infrastructure layer', 'success');
+
+                return true;
+
+            } catch (err) {
+                logProgressForPatch(
+                    patchId,
+                    `⚠️ Overpass import/zoom failed (${err.message}), falling back…`,
+                    'warning'
+                );
+                return fallbackBrowserImport(overpassQL, patchId);
             }
-
-            logProgressForPatch(patchId, 'Power infrastructure data loaded successfully in JOSM', 'success');
-            return true;
         }
+
+
         
         async function loadPatchInJOSM(patchId, buttonElement) {
             const mapperId = document.getElementById(`mapperId-${patchId}`).value.trim();
@@ -1119,15 +1185,19 @@ out meta skel qt;`;
                 const patchData = await getPatchDetails(patchId);
                 const bbox = patchData.bbox;
                 
-                // Use the same simplified query for consistency
+                // Use the comprehensive query for Overpass Turbo
                 const overpassQuery = createOverpassQuery(bbox);
                 
-                const encodedQuery = encodeURIComponent(overpassQuery);
-                const overpassUrl = `https://overpass-turbo.eu/?Q=${encodedQuery}`;
+                // Overpass Turbo expects the query in a specific format
+                const turboQuery = `/* Power Infrastructure for Patch ${patchId} */
+${overpassQuery}`;
+                
+                const encodedQuery = encodeURIComponent(turboQuery);
+                const overpassUrl = `https://overpass-turbo.eu/?Q=${encodedQuery}&R`;
                 
                 window.open(overpassUrl, '_blank');
-                logProgressForPatch(patchId, 'Opened power infrastructure query in Overpass Turbo', 'success');
-                toast.show('Opened patch in Overpass Turbo for manual review', 'info');
+                logProgressForPatch(patchId, 'Opened comprehensive power infrastructure query in Overpass Turbo', 'success');
+                toast.show('Opened patch in Overpass Turbo with full power infrastructure query', 'info');
                 
             } catch (error) {
                 logProgressForPatch(patchId, `Overpass error: ${error.message}`, 'error');
@@ -1170,7 +1240,7 @@ out meta skel qt;`;
             const testBbox = { min_lat: 48.0, min_lon: 67.0, max_lat: 48.01, max_lon: 67.01 };
             const testQuery = createOverpassQuery(testBbox);
 
-            console.log('🧪 Testing Overpass API...');
+            console.log('🧪 Testing Overpass API with comprehensive power query...');
             const startTime = Date.now();
             
             try {
@@ -1180,7 +1250,7 @@ out meta skel qt;`;
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: new URLSearchParams({ data: testQuery }),
-                    signal: AbortSignal.timeout(15000)
+                    signal: AbortSignal.timeout(30000) // 30 second timeout for test
                 });
                 
                 const responseTime = Date.now() - startTime;
@@ -1189,27 +1259,48 @@ out meta skel qt;`;
                     const osmData = await response.text();
                     const nodes = (osmData.match(/<node/g) || []).length;
                     const ways = (osmData.match(/<way/g) || []).length;
+                    const relations = (osmData.match(/<relation/g) || []).length;
+                    
+                    // Count specific power infrastructure types
+                    const towers = (osmData.match(/power.*=.*tower/g) || []).length;
+                    const poles = (osmData.match(/power.*=.*pole/g) || []).length;
+                    const lines = (osmData.match(/power.*=.*line/g) || []).length;
+                    const substations = (osmData.match(/power.*=.*substation/g) || []).length;
                     
                     const message = `✅ Overpass API Test Successful
 
 ⏱️ Response time: ${responseTime}ms
-📊 Power infrastructure found:
-  • ${nodes} power nodes
-  • ${ways} power ways
+📊 Power infrastructure found in test area:
+  • ${nodes} total nodes
+  • ${ways} total ways  
+  • ${relations} total relations
+  
+🗼 Infrastructure breakdown:
+  • ${towers} towers
+  • ${poles} poles
+  • ${lines} power lines
+  • ${substations} substations
+  
 📦 Data size: ${(osmData.length / 1024).toFixed(1)} KB
 
-🎯 The API is responding normally.`;
+🎯 The API is responding normally with comprehensive power data.`;
 
                     alert(message);
                     toast.show('Overpass API test successful', 'success');
                 } else {
+                    const errorText = await response.text();
                     const errorMsg = `❌ Overpass API Test Failed
 
 ❌ HTTP Error: ${response.status} ${response.statusText}
 ⏱️ Response time: ${responseTime}ms
+📝 Error details: ${errorText.substring(0, 200)}${errorText.length > 200 ? '...' : ''}
 
-The Overpass API may be temporarily unavailable.
-Try again later or use JOSM's download feature.`;
+The Overpass API returned an error. This might be due to:
+• Server overload (try again later)
+• Query syntax error
+• Timeout on complex query
+
+Try again later or use JOSM's standard download feature.`;
                     
                     alert(errorMsg);
                     toast.show('Overpass API test failed', 'error');
@@ -1221,6 +1312,11 @@ Try again later or use JOSM's download feature.`;
 
 ❌ Connection failed: ${error.message}
 ⏱️ Response time: ${responseTime}ms
+
+Possible causes:
+• Network connection issues
+• Overpass API server down
+• Query timeout (complex query)
 
 Check your internet connection or try again later.`;
                 
