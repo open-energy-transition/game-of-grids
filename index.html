@@ -970,13 +970,15 @@ out meta qt;`;
                 
                 logProgressForPatch(patchId, 'JOSM connection verified ✓', 'success');
                 
-                // Step 1: Create boundary rectangle (no OSM download)
-                buttonElement.innerHTML = '📍 <span>Creating Boundary...</span>';
-                await createBoundaryInJOSM(patchData.bbox, patchId);
-                
-                // Step 2: Load power infrastructure data from Overpass
+                // Step 1: Load power infrastructure data from Overpass
                 buttonElement.innerHTML = '🔌 <span>Loading Power Data...</span>';
                 const powerDataLoaded = await loadOverpassDataInJOSM(patchData.bbox, patchId);
+
+                // Step 2: Create boundary rectangle (no OSM download)
+                buttonElement.innerHTML = '📍 <span>Creating Boundary...</span>';
+                await createBoundaryInJOSM(patchData.bbox, patchId);
+
+
                 
                 if (powerDataLoaded) {
                     logProgressForPatch(patchId, '🎉 Complete! Boundary created and power infrastructure loaded', 'success');
