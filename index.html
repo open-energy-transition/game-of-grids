@@ -796,6 +796,7 @@
                     const loadDataUrl = `${CONFIG.JOSM_BASE_URL}/load_data?` +
                         `new_layer=true&` +
                         `layer_name=${encodeURIComponent(`Patch ${patchId} - BOUNDARY (DO NOT UPLOAD)`)}&` +
+                        `upload_policy=false&` +
                         `data=${encodedData}`;
                     
                     const loadResponse = await fetch(loadDataUrl, {
