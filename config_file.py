@@ -5,11 +5,11 @@ Configuration file for Osmose processing pipeline
 
 # Database Configuration
 DB_CONFIG = {
-    'host': 'db.teumppdbhbrozswbpond.supabase.co',
-    'port': 5432,
-    'database': 'postgres',
-    'user': 'postgres',
-    'password': '9%%XJMVWB&ELyre'
+    'host': 'host',
+    'port': 1234,
+    'database': 'database',
+    'user': 'user',
+    'password': 'password'
 }
 
 # Osmose API Configuration
