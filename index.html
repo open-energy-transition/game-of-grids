@@ -797,6 +797,7 @@
                         `new_layer=true&` +
                         `layer_name=${encodeURIComponent(`Patch ${patchId} - BOUNDARY (DO NOT UPLOAD)`)}&` +
                         `upload_policy=never&` +
+                        `layer_locked=true&` +
                         `data=${encodedData}`;
                     
                     const loadResponse = await fetch(loadDataUrl, {
