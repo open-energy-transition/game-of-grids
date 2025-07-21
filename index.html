@@ -7,6 +7,17 @@
     <meta name="description" content="Collaborative power infrastructure mapping using OpenStreetMap and JOSM">
     <meta name="theme-color" content="#036d7a">
     <link rel="stylesheet" href="style.css">
+    <style>
+        .load-button-merged {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
+            border-color: #4f46e5 !important;
+        }
+        .load-button-merged:hover {
+            background: linear-gradient(135deg, #4338ca, #6d28d9) !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+    </style>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 </head>
 <body>
@@ -76,8 +87,9 @@
                 <div class="workflow-step">
                     <div class="step-number">1</div>
                     <div class="step-content">
-                        <h3>🎯 Load 3 Layers in JOSM</h3>
-                        <p>Click "Load in JOSM" to create: boundary rectangle, power infrastructure data, and OSM notes</p>
+                        <h3>🎯 Choose Loading Option</h3>
+                        <p><strong>3 Layers:</strong> Separate power, boundary, and notes layers<br>
+                        <strong>2 Layers:</strong> Power + merged boundary+notes layer</p>
                     </div>
                 </div>
                 <div class="workflow-step">
@@ -598,7 +610,7 @@
                         <div class="patch-summary">
                             ${patch.status === 'completed' ? 
                                 '<div class="completion-indicator">✅ Mapping completed</div>' :
-                                '<div class="action-hint">🚀 Click to load 3 layers (boundary, power data, and OSM notes) in JOSM</div>'
+                                '<div class="action-hint">🚀 Click to load in JOSM: 3 separate layers OR 2 layers with merged boundary+notes</div>'
                             }
                         </div>
                         
@@ -648,7 +660,10 @@
                                 
                                 <div class="action-buttons">
                                     <button class="button load-button" onclick="loadPatchInJOSM('${patch.patch_id}', this); event.stopPropagation();">
-                                        🚀 <span>Load in JOSM</span>
+                                        🚀 <span>Load 3 Layers</span>
+                                    </button>
+                                    <button class="button load-button-merged" onclick="loadPatchMergedInJOSM('${patch.patch_id}', this); event.stopPropagation();">
+                                        🔗 <span>Load 2 Layers (Merged Boundary+Notes)</span>
                                     </button>
                                     <button class="button complete-button" onclick="markPatchComplete('${patch.patch_id}'); event.stopPropagation();">
                                         ✅ <span>Mark Complete</span>
@@ -1054,7 +1069,208 @@ out meta qt;`;
             xmlContent += `</osm>`;
             return xmlContent;
         }
+
+        // Merge boundary XML and notes XML into a single combined XML file
+        function mergeBoundaryAndNotesXML(boundaryXML, notesXML, patchId) {
+            try {
+                // More robust content extraction using DOM-like approach
+                const extractContent = (xmlString) => {
+                    // Find content between <osm> tags
+                    const osmStart = xmlString.indexOf('<osm');
+                    const osmTagEnd = xmlString.indexOf('>', osmStart) + 1;
+                    const osmEnd = xmlString.lastIndexOf('</osm>');
+                    
+                    if (osmStart === -1 || osmTagEnd === -1 || osmEnd === -1) {
+                        throw new Error('Invalid XML structure');
+                    }
+                    
+                    return xmlString.substring(osmTagEnd, osmEnd).trim();
+                };
+
+                const boundaryContent = extractContent(boundaryXML);
+                const notesContent = extractContent(notesXML);
+
+                // Create combined XML with proper structure
+                const combinedXML = `<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6" generator="Game of Grids - Combined Boundary &amp; Notes">
+${boundaryContent}
+${notesContent}
+</osm>`;
+
+                return combinedXML;
+                
+            } catch (error) {
+                console.error('XML merge error:', error);
+                // Fallback: return just boundary XML if merge fails
+                return boundaryXML;
+            }
+        }
+
+        // Load merged boundary and notes XML into JOSM as a single layer
+        async function loadMergedBoundaryAndNotesInJOSM(bbox, notes, patchId) {
+            logProgressForPatch(patchId, 'Creating combined boundary & notes layer...', 'info');
+
+            try {
+                // Generate both XML files
+                const boundaryXML = createBoundaryOSMXML(bbox, patchId);
+                let combinedXML;
+
+                if (notes.length > 0) {
+                    const notesXML = convertNotesToOSMXML(notes, patchId);
+                    combinedXML = mergeBoundaryAndNotesXML(boundaryXML, notesXML, patchId);
+                    logProgressForPatch(patchId, `Merged XML created (${notes.length} notes + boundary)`, 'info');
+                } else {
+                    // If no notes, just use boundary XML
+                    combinedXML = boundaryXML;
+                    logProgressForPatch(patchId, 'No notes found, using boundary-only layer', 'info');
+                }
+
+                // Validate XML length (JOSM has URL length limits)
+                if (combinedXML.length > 50000) {
+                    logProgressForPatch(patchId, 'Combined XML too large, falling back to boundary only', 'warning');
+                    combinedXML = boundaryXML;
+                }
+
+                // Load combined data into JOSM as a single locked layer
+                const encodedCombinedData = encodeURIComponent(combinedXML);
+                
+                const loadCombinedUrl = `${CONFIG.JOSM_BASE_URL}/load_data?` +
+                    `new_layer=true&` +
+                    `layer_name=${encodeURIComponent(`Patch ${patchId} - Boundary & Notes (DO NOT UPLOAD)`)}&` +
+                    `upload_policy=never&` +
+                    `layer_locked=true&` +
+                    `data=${encodedCombinedData}`;
+                
+                // Log URL length for debugging
+                logProgressForPatch(patchId, `Sending ${combinedXML.length} chars to JOSM (URL: ${loadCombinedUrl.length} chars)`, 'info');
+                
+                const josmCombinedResponse = await fetch(loadCombinedUrl, {
+                    method: 'GET',
+                    signal: AbortSignal.timeout(CONFIG.JOSM_TIMEOUT)
+                });
+                
+                if (!josmCombinedResponse.ok) {
+                    const errorText = await josmCombinedResponse.text();
+                    logProgressForPatch(patchId, `JOSM error details: ${errorText}`, 'error');
+                    throw new Error(`JOSM combined layer import failed (HTTP ${josmCombinedResponse.status}): ${errorText}`);
+                }
+                
+                const notesText = notes.length > 0 ? ` (${notes.length} notes + boundary)` : ' (boundary only)';
+                logProgressForPatch(patchId, `✓ Combined layer loaded${notesText} - LOCKED`, 'success');
+                return true;
+
+            } catch (err) {
+                logProgressForPatch(patchId, `⚠️ Combined layer failed: ${err.message}`, 'warning');
+                
+                // Fallback: try to load just boundary as separate layer
+                try {
+                    logProgressForPatch(patchId, 'Attempting fallback: boundary-only layer...', 'info');
+                    await createBoundaryInJOSM(bbox, patchId);
+                    logProgressForPatch(patchId, '✓ Fallback boundary layer created', 'success');
+                    return true;
+                } catch (fallbackError) {
+                    logProgressForPatch(patchId, `❌ Fallback also failed: ${fallbackError.message}`, 'error');
+                    return false;
+                }
+            }
+        }
         
+        // Main patch loading function with merged boundary+notes option
+        async function loadPatchMergedInJOSM(patchId, buttonElement) {
+            const mapperId = document.getElementById(`mapperId-${patchId}`).value.trim();
+            if (!mapperId) {
+                toast.show('Please enter your OpenStreetMap username before loading the patch.', 'warning');
+                document.getElementById(`mapperId-${patchId}`).focus();
+                return;
+            }
+            
+            const originalText = buttonElement.innerHTML;
+            buttonElement.innerHTML = '⏳ <span>Loading...</span>';
+            buttonElement.disabled = true;
+            
+            try {
+                logProgressForPatch(patchId, `Starting 2-layer patch load (merged) for ${mapperId}`, 'info');
+                
+                const patchData = await getPatchDetails(patchId);
+                
+                if (!patchData.bbox) {
+                    throw new Error('Could not determine patch coordinates');
+                }
+                
+                logProgressForPatch(patchId, `Patch coordinates: ${Object.values(patchData.bbox).map(v => v.toFixed(6)).join(', ')}`, 'info');
+                
+                const josmStatus = await testJOSM();
+                if (!josmStatus.connected) {
+                    throw new Error(`JOSM not connected: ${josmStatus.error}`);
+                }
+                
+                logProgressForPatch(patchId, 'JOSM connection verified ✓', 'success');
+                
+                // Step 1: Load power infrastructure data from Overpass (separate layer)
+                buttonElement.innerHTML = '🔌 <span>Loading Power Data...</span>';
+                const powerDataLoaded = await loadOverpassDataInJOSM(patchData.bbox, patchId);
+
+                // Step 2: Fetch OSM Notes and create merged boundary+notes layer
+                buttonElement.innerHTML = '🔗 <span>Creating Merged Layer...</span>';
+                
+                // Fetch OSM notes data
+                const bboxString = `${patchData.bbox.min_lon},${patchData.bbox.min_lat},${patchData.bbox.max_lon},${patchData.bbox.max_lat}`;
+                const notesApiUrl = `https://api.openstreetmap.org/api/0.6/notes.json?bbox=${bboxString}&limit=10000&closed=7`;
+
+                logProgressForPatch(patchId, 'Fetching OSM notes for merged layer...', 'info');
+
+                let notesFeatures = [];
+                try {
+                    const notesResponse = await fetch(notesApiUrl, {
+                        method: 'GET',
+                        signal: AbortSignal.timeout(30000)
+                    });
+                    
+                    if (notesResponse.ok) {
+                        const notesData = await notesResponse.json();
+                        notesFeatures = notesData.features;
+                        logProgressForPatch(patchId, `Retrieved ${notesFeatures.length} notes for merged layer`, 'info');
+                    } else {
+                        logProgressForPatch(patchId, 'Notes API failed, creating boundary-only merged layer', 'warning');
+                    }
+                } catch (notesError) {
+                    logProgressForPatch(patchId, `Notes fetch failed: ${notesError.message}, proceeding with boundary only`, 'warning');
+                }
+
+                // Create merged boundary+notes layer
+                const mergedLoaded = await loadMergedBoundaryAndNotesInJOSM(patchData.bbox, notesFeatures, patchId);
+
+                // Summarize results
+                const results = [];
+                if (powerDataLoaded) results.push('power infrastructure');
+                if (mergedLoaded) {
+                    if (notesFeatures.length > 0) {
+                        results.push(`merged boundary+notes (${notesFeatures.length} notes)`);
+                    } else {
+                        results.push('boundary');
+                    }
+                }
+                
+                if (powerDataLoaded && mergedLoaded) {
+                    logProgressForPatch(patchId, '🎉 Complete! 2-layer merged load successful', 'success');
+                    toast.show(`Patch ${patchId} loaded with ${results.join(' + ')} for ${mapperId}`, 'success');
+                } else {
+                    const loadedItems = results.filter((_, index) => 
+                        index === 0 ? powerDataLoaded : mergedLoaded
+                    );
+                    logProgressForPatch(patchId, `⚠️ Partial load: ${loadedItems.join(' + ')} loaded`, 'warning');
+                    toast.show(`Patch ${patchId} partially loaded: ${loadedItems.join(' + ')}`, 'warning');
+                }
+                
+            } catch (error) {
+                logProgressForPatch(patchId, `❌ Error: ${error.message}`, 'error');
+                toast.show(`Failed to load patch: ${error.message}`, 'error');
+            } finally {
+                buttonElement.innerHTML = originalText;
+                buttonElement.disabled = false;
+            }
+        }
+
         // Main patch loading function
         async function loadPatchInJOSM(patchId, buttonElement) {
             const mapperId = document.getElementById(`mapperId-${patchId}`).value.trim();
@@ -1353,7 +1569,7 @@ Troubleshooting:
                 });
                 
                 message += `\n🔧 Technical Info:\n`;
-                message += `  Version: 2.1.0 (3-Layer System: Boundary, Power, Notes)\n`;
+                message += `  Version: 2.1.0 (3-Layer + Merged Options: Power | Boundary+Notes)\n`;
                 message += `  Connection: ${AppState.connectionStatus}\n`;
                 message += `  Theme: ${AppState.theme}\n`;
                 
