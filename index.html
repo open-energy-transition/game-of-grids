@@ -660,10 +660,7 @@
                                 
                                 <div class="action-buttons">
                                     <button class="button load-button" onclick="loadPatchInJOSM('${patch.patch_id}', this); event.stopPropagation();">
-                                        🚀 <span>Load 3 Layers</span>
-                                    </button>
-                                    <button class="button load-button-merged" onclick="loadPatchMergedInJOSM('${patch.patch_id}', this); event.stopPropagation();">
-                                        🔗 <span>Load 2 Layers (Merged Boundary+Notes)</span>
+                                        🚀 <span>Load in JOSM</span>
                                     </button>
                                     <button class="button complete-button" onclick="markPatchComplete('${patch.patch_id}'); event.stopPropagation();">
                                         ✅ <span>Mark Complete</span>
@@ -1175,8 +1172,8 @@ ${notesContent}
             }
         }
         
-        // Main patch loading function with merged boundary+notes option
-        async function loadPatchMergedInJOSM(patchId, buttonElement) {
+        // Main patch loading function (now uses 2-layer merged approach by default)
+        async function loadPatchInJOSM(patchId, buttonElement) {
             const mapperId = document.getElementById(`mapperId-${patchId}`).value.trim();
             if (!mapperId) {
                 toast.show('Please enter your OpenStreetMap username before loading the patch.', 'warning');
@@ -1252,7 +1249,7 @@ ${notesContent}
                 }
                 
                 if (powerDataLoaded && mergedLoaded) {
-                    logProgressForPatch(patchId, '🎉 Complete! 2-layer merged load successful', 'success');
+                    logProgressForPatch(patchId, '🎉 Complete! 2-layer load successful', 'success');
                     toast.show(`Patch ${patchId} loaded with ${results.join(' + ')} for ${mapperId}`, 'success');
                 } else {
                     const loadedItems = results.filter((_, index) => 
@@ -1260,77 +1257,6 @@ ${notesContent}
                     );
                     logProgressForPatch(patchId, `⚠️ Partial load: ${loadedItems.join(' + ')} loaded`, 'warning');
                     toast.show(`Patch ${patchId} partially loaded: ${loadedItems.join(' + ')}`, 'warning');
-                }
-                
-            } catch (error) {
-                logProgressForPatch(patchId, `❌ Error: ${error.message}`, 'error');
-                toast.show(`Failed to load patch: ${error.message}`, 'error');
-            } finally {
-                buttonElement.innerHTML = originalText;
-                buttonElement.disabled = false;
-            }
-        }
-
-        // Main patch loading function
-        async function loadPatchInJOSM(patchId, buttonElement) {
-            const mapperId = document.getElementById(`mapperId-${patchId}`).value.trim();
-            if (!mapperId) {
-                toast.show('Please enter your OpenStreetMap username before loading the patch.', 'warning');
-                document.getElementById(`mapperId-${patchId}`).focus();
-                return;
-            }
-            
-            const originalText = buttonElement.innerHTML;
-            buttonElement.innerHTML = '⏳ <span>Loading...</span>';
-            buttonElement.disabled = true;
-            
-            try {
-                logProgressForPatch(patchId, `Starting 3-layer patch load for ${mapperId}`, 'info');
-                
-                const patchData = await getPatchDetails(patchId);
-                
-                if (!patchData.bbox) {
-                    throw new Error('Could not determine patch coordinates');
-                }
-                
-                logProgressForPatch(patchId, `Patch coordinates: ${Object.values(patchData.bbox).map(v => v.toFixed(6)).join(', ')}`, 'info');
-                
-                const josmStatus = await testJOSM();
-                if (!josmStatus.connected) {
-                    throw new Error(`JOSM not connected: ${josmStatus.error}`);
-                }
-                
-                logProgressForPatch(patchId, 'JOSM connection verified ✓', 'success');
-                
-                // Step 1: Load power infrastructure data from Overpass
-                buttonElement.innerHTML = '🔌 <span>Loading Power Data...</span>';
-                const powerDataLoaded = await loadOverpassDataInJOSM(patchData.bbox, patchId);
-
-                // Step 2: Create boundary rectangle (no OSM download)
-                buttonElement.innerHTML = '📍 <span>Creating Boundary...</span>';
-                await createBoundaryInJOSM(patchData.bbox, patchId);
-
-                // Step 3: Load OSM Notes from API
-                buttonElement.innerHTML = '📝 <span>Loading OSM Notes...</span>';
-                const notesLoaded = await loadOSMNotesInJOSM(patchData.bbox, patchId);
-
-                // Summarize results
-                const results = [];
-                if (powerDataLoaded) results.push('power infrastructure');
-                if (notesLoaded) results.push('OSM notes');
-                results.push('boundary rectangle');
-                
-                if (powerDataLoaded && notesLoaded) {
-                    logProgressForPatch(patchId, '🎉 Complete! All 3 layers loaded successfully', 'success');
-                    toast.show(`Patch ${patchId} loaded with ${results.join(', ')} for ${mapperId}`, 'success');
-                } else {
-                    const loadedItems = results.filter((_, index) => 
-                        index === 0 ? powerDataLoaded : 
-                        index === 1 ? notesLoaded : 
-                        true
-                    );
-                    logProgressForPatch(patchId, `⚠️ Partial load: ${loadedItems.join(', ')} loaded`, 'warning');
-                    toast.show(`Patch ${patchId} partially loaded: ${loadedItems.join(', ')}`, 'warning');
                 }
                 
             } catch (error) {
