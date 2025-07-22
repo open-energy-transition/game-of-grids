@@ -88,8 +88,8 @@
                     <div class="step-number">1</div>
                     <div class="step-content">
                         <h3>🎯 Choose Loading Option</h3>
-                        <p><strong>3 Layers:</strong> Separate power, boundary, and notes layers<br>
-                        <strong>2 Layers:</strong> Power + merged boundary+notes layer</p>
+                        <p><strong>2 Layers (Recommended):</strong> Power layer + merged boundary+notes layer<br>
+                        <strong>Power layer loads LAST → becomes active for immediate editing</strong></p>
                     </div>
                 </div>
                 <div class="workflow-step">
@@ -610,7 +610,7 @@
                         <div class="patch-summary">
                             ${patch.status === 'completed' ? 
                                 '<div class="completion-indicator">✅ Mapping completed</div>' :
-                                '<div class="action-hint">🚀 Click to load in JOSM: 3 separate layers OR 2 layers with merged boundary+notes</div>'
+                                '<div class="action-hint">🚀 Click to load: Boundary+Notes → Power (active) → Auto-zoom to boundary</div>'
                             }
                         </div>
                         
@@ -660,7 +660,7 @@
                                 
                                 <div class="action-buttons">
                                     <button class="button load-button" onclick="loadPatchInJOSM('${patch.patch_id}', this); event.stopPropagation();">
-                                        🚀 <span>Load in JOSM</span>
+                                        🚀 <span>Load in JOSM (2-Layer + Zoom)</span>
                                     </button>
                                     <button class="button complete-button" onclick="markPatchComplete('${patch.patch_id}'); event.stopPropagation();">
                                         ✅ <span>Mark Complete</span>
@@ -802,74 +802,6 @@
             }
         }
         
-        // Create boundary rectangle using JOSM Remote Control
-        async function createBoundaryInJOSM(bbox, patchId) {
-            logProgressForPatch(patchId, 'Creating boundary rectangle in JOSM...', 'info');
-            
-            try {
-                // Method 1: Try load_data command to create new layer with boundary OSM data
-                try {
-                    const boundaryXML = createBoundaryOSMXML(bbox, patchId);
-                    const encodedData = encodeURIComponent(boundaryXML);
-                    
-                    const loadDataUrl = `${CONFIG.JOSM_BASE_URL}/load_data?` +
-                        `new_layer=true&` +
-                        `layer_name=${encodeURIComponent(`Patch ${patchId} - BOUNDARY (DO NOT UPLOAD)`)}&` +
-                        `upload_policy=never&` +
-                        `layer_locked=true&` +
-                        `data=${encodedData}`;
-                    
-                    const loadResponse = await fetch(loadDataUrl, {
-                        method: 'GET',
-                        signal: AbortSignal.timeout(CONFIG.JOSM_TIMEOUT)
-                    });
-                    
-                    if (loadResponse.ok) {
-                        logProgressForPatch(patchId, 'Boundary rectangle created via load_data', 'success');
-                        return true;
-                    } else {
-                        throw new Error('load_data failed, trying add_way');
-                    }
-                    
-                } catch (loadDataError) {
-                    logProgressForPatch(patchId, 'Trying alternative method...', 'info');
-                    
-                    // Method 2: Fallback to add_way command (requires "Create new objects" permission)
-                    // Coordinate format: lat,lon;lat,lon;lat,lon;lat,lon;lat,lon (semicolon separated, closed)
-                    const wayCoords = [
-                        `${bbox.min_lat},${bbox.min_lon}`, // Bottom-left
-                        `${bbox.min_lat},${bbox.max_lon}`, // Bottom-right
-                        `${bbox.max_lat},${bbox.max_lon}`, // Top-right  
-                        `${bbox.max_lat},${bbox.min_lon}`, // Top-left
-                        `${bbox.min_lat},${bbox.min_lon}`  // Back to bottom-left (close)
-                    ].join(';');
-                    
-                    const addWayUrl = `${CONFIG.JOSM_BASE_URL}/add_way?way=${wayCoords}&addtags=boundary=patch|name=Patch ${patchId} Boundary|note=DO NOT UPLOAD - Visual boundary only`;
-                    
-                    const wayResponse = await fetch(addWayUrl, {
-                        method: 'GET',
-                        signal: AbortSignal.timeout(CONFIG.JOSM_TIMEOUT)
-                    });
-                    
-                    if (!wayResponse.ok) {
-                        const responseText = await wayResponse.text();
-                        if (responseText.includes('permission') || wayResponse.status === 403) {
-                            throw new Error('Failed to create boundary. Please enable "Create new objects" permission in JOSM Remote Control preferences (Edit → Preferences → Remote Control → Permissions).');
-                        } else {
-                            throw new Error(`Failed to create boundary way (HTTP ${wayResponse.status}): ${responseText}`);
-                        }
-                    }
-                    
-                    logProgressForPatch(patchId, 'Boundary rectangle created via add_way', 'success');
-                    return true;
-                }
-                
-            } catch (error) {
-                logProgressForPatch(patchId, `Boundary creation failed: ${error.message}`, 'error');
-                throw error;
-            }
-        }
-
         // Generate OSM XML for boundary rectangle
         function createBoundaryOSMXML(bbox, patchId) {
             const nodes = [
@@ -956,63 +888,6 @@ out meta qt;`;
 
             } catch (err) {
                 logProgressForPatch(patchId, `⚠️ Overpass import failed: ${err.message}`, 'warning');
-                return false;
-            }
-        }
-
-        // Load OSM Notes from API
-        async function loadOSMNotesInJOSM(bbox, patchId) {
-            // OSM Notes API uses bbox format: left,bottom,right,top (min_lon,min_lat,max_lon,max_lat)
-            const bboxString = `${bbox.min_lon},${bbox.min_lat},${bbox.max_lon},${bbox.max_lat}`;
-            const notesApiUrl = `https://api.openstreetmap.org/api/0.6/notes.json?bbox=${bboxString}&limit=10000&closed=7`;
-
-            logProgressForPatch(patchId, 'Fetching OSM notes from API...', 'info');
-
-            try {
-                // Fetch notes data from OSM API
-                const notesResponse = await fetch(notesApiUrl, {
-                    method: 'GET',
-                    signal: AbortSignal.timeout(30000)
-                });
-                
-                if (!notesResponse.ok) {
-                    throw new Error(`OSM Notes API failed (HTTP ${notesResponse.status})`);
-                }
-                
-                const notesData = await notesResponse.json();
-                logProgressForPatch(patchId, `Retrieved ${notesData.features.length} notes from OSM API`, 'info');
-
-                if (notesData.features.length === 0) {
-                    logProgressForPatch(patchId, 'No OSM notes found in this area', 'info');
-                    return true;
-                }
-
-                // Convert notes to OSM XML format
-                const notesXML = convertNotesToOSMXML(notesData.features, patchId);
-                
-                // Load notes data into JOSM as a new layer
-                const encodedNotesData = encodeURIComponent(notesXML);
-                
-                const loadNotesUrl = `${CONFIG.JOSM_BASE_URL}/load_data?` +
-                    `new_layer=true&` +
-                    `layer_name=${encodeURIComponent(`Patch ${patchId} - OSM Notes`)}&` +
-                    `upload_policy=never&` +
-                    `data=${encodedNotesData}`;
-                
-                const josmNotesResponse = await fetch(loadNotesUrl, {
-                    method: 'GET',
-                    signal: AbortSignal.timeout(CONFIG.JOSM_TIMEOUT)
-                });
-                
-                if (!josmNotesResponse.ok) {
-                    throw new Error(`JOSM notes import failed (HTTP ${josmNotesResponse.status})`);
-                }
-                
-                logProgressForPatch(patchId, `✓ OSM notes loaded (${notesData.features.length} notes)`, 'success');
-                return true;
-
-            } catch (err) {
-                logProgressForPatch(patchId, `⚠️ Notes import failed: ${err.message}`, 'warning');
                 return false;
             }
         }
@@ -1158,21 +1033,41 @@ ${notesContent}
 
             } catch (err) {
                 logProgressForPatch(patchId, `⚠️ Combined layer failed: ${err.message}`, 'warning');
-                
-                // Fallback: try to load just boundary as separate layer
-                try {
-                    logProgressForPatch(patchId, 'Attempting fallback: boundary-only layer...', 'info');
-                    await createBoundaryInJOSM(bbox, patchId);
-                    logProgressForPatch(patchId, '✓ Fallback boundary layer created', 'success');
-                    return true;
-                } catch (fallbackError) {
-                    logProgressForPatch(patchId, `❌ Fallback also failed: ${fallbackError.message}`, 'error');
-                    return false;
-                }
+                return false;
             }
         }
         
-        // Main patch loading function (now uses 2-layer merged approach by default)
+        // Zoom JOSM to specific bounding box
+        async function zoomJOSMToBbox(bbox, patchId) {
+            logProgressForPatch(patchId, 'Setting zoom to patch boundary...', 'info');
+            
+            try {
+                // Use JOSM zoom command with bbox parameters
+                const zoomUrl = `${CONFIG.JOSM_BASE_URL}/zoom?` +
+                    `left=${bbox.min_lon}&` +
+                    `bottom=${bbox.min_lat}&` +
+                    `right=${bbox.max_lon}&` +
+                    `top=${bbox.max_lat}`;
+                
+                const zoomResponse = await fetch(zoomUrl, {
+                    method: 'GET',
+                    signal: AbortSignal.timeout(CONFIG.JOSM_TIMEOUT)
+                });
+                
+                if (!zoomResponse.ok) {
+                    throw new Error(`JOSM zoom failed (HTTP ${zoomResponse.status})`);
+                }
+                
+                logProgressForPatch(patchId, '✓ Zoomed to patch boundary', 'success');
+                return true;
+                
+            } catch (error) {
+                logProgressForPatch(patchId, `⚠️ Zoom failed: ${error.message}`, 'warning');
+                return false;
+            }
+        }
+
+        // Main patch loading function with FIXED zoom implementation
         async function loadPatchInJOSM(patchId, buttonElement) {
             const mapperId = document.getElementById(`mapperId-${patchId}`).value.trim();
             if (!mapperId) {
@@ -1186,7 +1081,7 @@ ${notesContent}
             buttonElement.disabled = true;
             
             try {
-                logProgressForPatch(patchId, `Starting 2-layer patch load (merged) for ${mapperId}`, 'info');
+                logProgressForPatch(patchId, `Starting 2-layer patch load with zoom fix for ${mapperId}`, 'info');
                 
                 const patchData = await getPatchDetails(patchId);
                 
@@ -1203,11 +1098,7 @@ ${notesContent}
                 
                 logProgressForPatch(patchId, 'JOSM connection verified ✓', 'success');
                 
-                // Step 1: Load power infrastructure data from Overpass (separate layer)
-                buttonElement.innerHTML = '🔌 <span>Loading Power Data...</span>';
-                const powerDataLoaded = await loadOverpassDataInJOSM(patchData.bbox, patchId);
-
-                // Step 2: Fetch OSM Notes and create merged boundary+notes layer
+                // STEP 1: Load merged boundary+notes layer FIRST
                 buttonElement.innerHTML = '🔗 <span>Creating Merged Layer...</span>';
                 
                 // Fetch OSM notes data
@@ -1234,12 +1125,19 @@ ${notesContent}
                     logProgressForPatch(patchId, `Notes fetch failed: ${notesError.message}, proceeding with boundary only`, 'warning');
                 }
 
-                // Create merged boundary+notes layer
+                // Create merged boundary+notes layer (loads first)
                 const mergedLoaded = await loadMergedBoundaryAndNotesInJOSM(patchData.bbox, notesFeatures, patchId);
 
-                // Summarize results
+                // STEP 2: Load power infrastructure data from Overpass LAST (becomes active layer)
+                buttonElement.innerHTML = '🔌 <span>Loading Power Data...</span>';
+                const powerDataLoaded = await loadOverpassDataInJOSM(patchData.bbox, patchId);
+
+                // STEP 3: Zoom to the full patch boundary (separate command ensures proper zoom)
+                buttonElement.innerHTML = '🔍 <span>Setting Zoom...</span>';
+                const zoomSet = await zoomJOSMToBbox(patchData.bbox, patchId);
+
+                // Summary results
                 const results = [];
-                if (powerDataLoaded) results.push('power infrastructure');
                 if (mergedLoaded) {
                     if (notesFeatures.length > 0) {
                         results.push(`merged boundary+notes (${notesFeatures.length} notes)`);
@@ -1247,13 +1145,15 @@ ${notesContent}
                         results.push('boundary');
                     }
                 }
+                if (powerDataLoaded) results.push('power infrastructure (ACTIVE)');
                 
                 if (powerDataLoaded && mergedLoaded) {
-                    logProgressForPatch(patchId, '🎉 Complete! 2-layer load successful', 'success');
-                    toast.show(`Patch ${patchId} loaded with ${results.join(' + ')} for ${mapperId}`, 'success');
+                    const zoomText = zoomSet ? ' with proper zoom to boundary' : '';
+                    logProgressForPatch(patchId, `🎉 Complete! 2-layer load successful${zoomText}`, 'success');
+                    toast.show(`Patch ${patchId} loaded: ${results.join(' + ')} for ${mapperId}`, 'success');
                 } else {
                     const loadedItems = results.filter((_, index) => 
-                        index === 0 ? powerDataLoaded : mergedLoaded
+                        index === 0 ? mergedLoaded : powerDataLoaded
                     );
                     logProgressForPatch(patchId, `⚠️ Partial load: ${loadedItems.join(' + ')} loaded`, 'warning');
                     toast.show(`Patch ${patchId} partially loaded: ${loadedItems.join(' + ')}`, 'warning');
@@ -1306,7 +1206,7 @@ ${notesContent}
                     assigned_at: new Date().toISOString(),
                     completed_at: new Date().toISOString(),
                     completion_notes: mappingNotes || null,
-                    app_version: '2.1.0'
+                    app_version: '2.2.0-zoom-fixed'
                 };
                 
                 await supabaseQuery('/patch_assignments', {
@@ -1442,7 +1342,7 @@ The API is responding normally.`;
 📡 Remote Control: Active
 🌐 Port 8111: Accessible
 
-Ready for 3-layer patch loading!`;
+Ready for 2-layer patch loading with zoom fix!`;
                     
                     alert(message);
                     toast.show('JOSM connection verified', 'success');
@@ -1495,7 +1395,7 @@ Troubleshooting:
                 });
                 
                 message += `\n🔧 Technical Info:\n`;
-                message += `  Version: 2.1.0 (3-Layer + Merged Options: Power | Boundary+Notes)\n`;
+                message += `  Version: 2.2.0 (2-Layer + Zoom Fix: Boundary+Notes → Power → Zoom)\n`;
                 message += `  Connection: ${AppState.connectionStatus}\n`;
                 message += `  Theme: ${AppState.theme}\n`;
                 
@@ -1570,7 +1470,7 @@ Troubleshooting:
             
             if (connected) {
                 loadPatches();
-                toast.show('Application loaded successfully with 3-layer system', 'success');
+                toast.show('Application loaded successfully with zoom fix!', 'success');
             } else {
                 document.getElementById('patches').innerHTML = 
                     `<div class="error-state">
