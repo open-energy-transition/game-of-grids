@@ -233,7 +233,7 @@
             REFRESH_INTERVAL: 300000,
             MAX_RETRIES: 3,
             PAGINATION_SIZE: 50,
-            APP_VERSION: '2.2.0'
+            APP_VERSION: '2.2.1'
         };
         
         // Application state
@@ -458,6 +458,7 @@
                 const connected = await testConnection();
                 if (!connected) throw new Error('Database connection failed');
 
+                // Get patches from osmose_patches table
                 const query = `/osmose_patches?select=patch_id,country_code,country_name,error_count,area_km2,perimeter_km,priority,difficulty,created_at&country_code=eq.${countryCode}&order=priority.desc,created_at.asc&limit=${CONFIG.PAGINATION_SIZE}`;
                 const patches = await supabaseQuery(query);
                 
@@ -465,6 +466,7 @@
                 
                 let filteredPatches = patches;
                 if (!showCompleted) {
+                    // Get completed assignments from patch_assignments table
                     const completedQuery = `/patch_assignments?select=patch_id&status=eq.completed`;
                     const completedPatches = await supabaseQuery(completedQuery);
                     const completedIds = new Set(completedPatches.map(p => p.patch_id));
@@ -478,12 +480,23 @@
                 // Get completion status for remaining patches
                 const patchIds = AppState.currentPatches.map(p => p.patch_id);
                 if (patchIds.length > 0) {
-                    const statusQuery = `/patch_assignments?select=patch_id,status&patch_id=in.(${patchIds.join(',')})&status=eq.completed`;
+                    const statusQuery = `/patch_assignments?select=patch_id,status,mapper_id,completed_at&patch_id=in.(${patchIds.join(',')})&status=eq.completed`;
                     const completedStatuses = await supabaseQuery(statusQuery);
-                    const completedMap = new Map(completedStatuses.map(s => [s.patch_id, s.status]));
+                    const completedMap = new Map(completedStatuses.map(s => [s.patch_id, {
+                        status: s.status,
+                        mapper_id: s.mapper_id,
+                        completed_at: s.completed_at
+                    }]));
                     
                     AppState.currentPatches.forEach(patch => {
-                        patch.status = completedMap.get(patch.patch_id) || 'available';
+                        const completion = completedMap.get(patch.patch_id);
+                        if (completion) {
+                            patch.status = completion.status;
+                            patch.mapper_id = completion.mapper_id;
+                            patch.completed_at = completion.completed_at;
+                        } else {
+                            patch.status = 'available';
+                        }
                     });
                 }
                 
@@ -550,7 +563,7 @@
                          aria-expanded="false">
                     
                     <div class="status-badge ${patch.status === 'completed' ? 'completed-badge' : 'available'}">
-                        ${patch.status.toUpperCase()}
+                        ${(patch.status || 'available').toUpperCase()}
                     </div>
                     
                     <header class="patch-header">
@@ -563,7 +576,7 @@
                     
                     <div class="patch-summary">
                         ${patch.status === 'completed' ? 
-                            '<div class="completion-indicator">✅ Mapping completed</div>' :
+                            `<div class="completion-indicator">✅ Completed by ${patch.mapper_id || 'Unknown mapper'}</div>` :
                             '<div class="action-hint">🚀 Start Mapping</div>'
                         }
                     </div>
@@ -582,11 +595,12 @@
                                     <div class="form-row">
                                         <div class="form-group">
                                             <label for="mapperId-${patch.patch_id}">OpenStreetMap Username *</label>
-                                            <input type="text" id="mapperId-${patch.patch_id}" required placeholder="Your OSM username">
+                                            <input type="text" id="mapperId-${patch.patch_id}" required placeholder="Your OSM username" ${patch.mapper_id ? `value="${patch.mapper_id}"` : ''}>
                                         </div>
                                         <div class="form-group">
                                             <label for="mapperEmail-${patch.patch_id}">Email (Optional)</label>
                                             <input type="email" id="mapperEmail-${patch.patch_id}" placeholder="your@email.com">
+                                            <small class="field-note">Note: Email is not stored (not in database schema)</small>
                                         </div>
                                     </div>
                                 </section>
@@ -604,7 +618,7 @@
                                 <button class="button load-button" onclick="loadPatchInJOSM('${patch.patch_id}', this); event.stopPropagation();">
                                     🚀 <span>Load in JOSM</span>
                                 </button>
-                                <button class="button complete-button" onclick="markPatchComplete('${patch.patch_id}'); event.stopPropagation();">
+                                <button class="button complete-button" onclick="markPatchComplete('${patch.patch_id}'); event.stopPropagation();" ${patch.status === 'completed' ? 'disabled' : ''}>
                                     ✅ <span>Mark Complete</span>
                                 </button>
                                 <button class="button overpass-button" onclick="openOverpassLink('${patch.patch_id}'); event.stopPropagation();">
@@ -1082,6 +1096,7 @@ ${notesContent}
             try {
                 logProgressForPatch(patchId, 'Checking completion status...', 'info');
                 
+                // Check if already completed using correct table and field names
                 const existing = await supabaseQuery(`/patch_assignments?select=status,mapper_id,completed_at&patch_id=eq.${patchId}&status=eq.completed&limit=1`);
                 
                 if (existing.length > 0) {
@@ -1093,21 +1108,39 @@ ${notesContent}
                 
                 logProgressForPatch(patchId, 'Creating completion record...', 'info');
                 
+                // Use the correct field names that match your schema
                 const completionData = {
-                    patch_id: patchId,
-                    mapper_id: mapperId,
-                    mapper_email: mapperEmail || null,
-                    status: 'completed',
-                    assigned_at: new Date().toISOString(),
-                    completed_at: new Date().toISOString(),
-                    completion_notes: mappingNotes || null,
-                    app_version: CONFIG.APP_VERSION
+                    patch_id: patchId,              // text field
+                    mapper_id: mapperId,            // text field  
+                    status: 'completed',            // text field
+                    assigned_at: new Date().toISOString(),     // timestamp
+                    completed_at: new Date().toISOString(),    // timestamp
+                    completion_notes: mappingNotes || null     // text field (optional)
                 };
                 
-                await supabaseQuery('/patch_assignments', {
+                // Note: mapper_email and app_version are not in your schema, so removed
+                // Note: assignment_id should auto-increment as primary key
+                
+                logProgressForPatch(patchId, `Sending data: ${JSON.stringify(completionData, null, 2)}`, 'info');
+                
+                const response = await fetch(`${CONFIG.SUPABASE_URL}/patch_assignments`, {
                     method: 'POST',
+                    headers: {
+                        ...getSupabaseHeaders(),
+                        'Prefer': 'return=representation'
+                    },
                     body: JSON.stringify(completionData)
                 });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    logProgressForPatch(patchId, `Response status: ${response.status}`, 'error');
+                    logProgressForPatch(patchId, `Response body: ${errorText}`, 'error');
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                
+                const result = await response.json();
+                logProgressForPatch(patchId, `Success! Created assignment: ${JSON.stringify(result, null, 2)}`, 'success');
                 
                 logProgressForPatch(patchId, '🎉 Marked as completed!', 'success');
                 toast.show(`Patch ${patchId} completed by ${mapperId}!`, 'success');
@@ -1241,7 +1274,10 @@ ${notesContent}
                 showProgressIndicator('Gathering debug information...');
                 
                 const allPatches = await supabaseQuery('/osmose_patches?select=country_code,country_name&limit=1000');
-                const completedPatches = await supabaseQuery('/patch_assignments?select=patch_id,status&status=eq.completed');
+                const completedPatches = await supabaseQuery('/patch_assignments?select=patch_id,status,mapper_id,assigned_at,completed_at&status=eq.completed');
+                
+                // Test patch_assignments table structure
+                const sampleAssignment = await supabaseQuery('/patch_assignments?select=*&limit=1');
                 
                 const countryCounts = {};
                 allPatches.forEach(patch => {
@@ -1253,10 +1289,14 @@ ${notesContent}
                     .sort(([,a], [,b]) => b - a)
                     .slice(0, 10);
                 
+                console.log('=== PATCH ASSIGNMENTS DEBUG ===');
+                console.log('Sample assignment record:', sampleAssignment);
+                console.log('All completed assignments:', completedPatches);
+                
                 let message = '🔍 Database Debug Information\n\n';
                 message += `📊 Statistics:\n`;
                 message += `  Total patches: ${allPatches.length.toLocaleString()}\n`;
-                message += `  Completed: ${completedPatches.length.toLocaleString()}\n`;
+                message += `  Completed assignments: ${completedPatches.length.toLocaleString()}\n`;
                 message += `  Completion rate: ${((completedPatches.length / allPatches.length) * 100).toFixed(1)}%\n\n`;
                 
                 message += '🌍 Top Countries:\n';
@@ -1264,17 +1304,25 @@ ${notesContent}
                     message += `  ${code}: ${count.toLocaleString()} patches\n`;
                 });
                 
+                message += `\n📝 patch_assignments table:\n`;
+                if (sampleAssignment.length > 0) {
+                    message += `  Sample record fields: ${Object.keys(sampleAssignment[0]).join(', ')}\n`;
+                } else {
+                    message += `  No assignment records found\n`;
+                }
+                
                 message += `\n🔧 Technical Info:\n`;
-                message += `  Version: ${CONFIG.APP_VERSION} (2-Layer + Zoom Fix)\n`;
+                message += `  Version: ${CONFIG.APP_VERSION}\n`;
                 message += `  Connection: ${AppState.connectionStatus}\n`;
                 message += `  Theme: ${AppState.theme}\n`;
                 
                 alert(message);
-                toast.show('Debug information collected', 'info');
+                toast.show('Debug information collected - check console for details', 'info');
                 
             } catch (error) {
                 alert(`❌ Debug failed: ${error.message}`);
                 toast.show(`Debug failed: ${error.message}`, 'error');
+                console.error('Debug error:', error);
             } finally {
                 hideProgressIndicator();
             }
