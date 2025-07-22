@@ -45,7 +45,7 @@
             <p>Automated Power Infrastructure Mapping with OpenStreetMap & JOSM</p>
         </header>
         
-        <!-- Enhanced prerequisite section -->
+        <!-- Prerequisites -->
         <section class="warning" role="region" aria-labelledby="prerequisites-heading">
             <h2 id="prerequisites-heading">🔧 Prerequisites</h2>
             <div class="feature-grid">
@@ -80,37 +80,36 @@
             </div>
         </section>
 
-        <!-- Workflow section -->
+        <!-- Workflow -->
         <section class="info" role="region" aria-labelledby="workflow-heading">
             <h2 id="workflow-heading">🚨 Mapping Workflow</h2>
             <div class="workflow-steps">
                 <div class="workflow-step">
                     <div class="step-number">1</div>
                     <div class="step-content">
-                        <h3>🎯 Choose Loading Option</h3>
-                        <p><strong>2 Layers (Recommended):</strong> Power layer + merged boundary+notes layer<br>
-                        <strong>Power layer loads LAST → becomes active for immediate editing</strong></p>
+                        <h3>🎯 Load Patch</h3>
+                        <p>Boundary+Notes layer → Power layer (active) → Auto-zoom to boundary</p>
                     </div>
                 </div>
                 <div class="workflow-step">
                     <div class="step-number">2</div>
                     <div class="step-content">
-                        <h3>🗺️ Map Missing Features</h3>
-                        <p>Review existing power data and OSM notes, then add any missing infrastructure within the boundary</p>
+                        <h3>🗺️ Map Features</h3>
+                        <p>Add missing power infrastructure within the boundary</p>
                     </div>
                 </div>
                 <div class="workflow-step">
                     <div class="step-number">3</div>
                     <div class="step-content">
                         <h3>💾 Upload Changes</h3>
-                        <p>Upload only the power infrastructure data (boundary and notes layers cannot be uploaded)</p>
+                        <p>Upload only the power layer data</p>
                     </div>
                 </div>
                 <div class="workflow-step">
                     <div class="step-number">4</div>
                     <div class="step-content">
                         <h3>✅ Mark Complete</h3>
-                        <p>Submit your completion with notes and username to track progress</p>
+                        <p>Submit completion with notes</p>
                     </div>
                 </div>
             </div>
@@ -122,38 +121,23 @@
             <div class="feature-grid">
                 <div class="feature-item">
                     <span class="feature-icon">⚡</span>
-                    <div>
-                        <strong>Power Lines</strong>
-                        <p>All power lines & cables</p>
-                    </div>
+                    <div><strong>Power Lines</strong><p>All power lines & cables</p></div>
                 </div>
                 <div class="feature-item">
                     <span class="feature-icon">🗼</span>
-                    <div>
-                        <strong>Support Structures</strong>
-                        <p>Towers, poles, portals & terminals</p>
-                    </div>
+                    <div><strong>Support Structures</strong><p>Towers, poles, portals & terminals</p></div>
                 </div>
                 <div class="feature-item">
                     <span class="feature-icon">🏭</span>
-                    <div>
-                        <strong>Facilities</strong>
-                        <p>Substations, transformers, plants & generators</p>
-                    </div>
+                    <div><strong>Facilities</strong><p>Substations, transformers, plants & generators</p></div>
                 </div>
                 <div class="feature-item">
                     <span class="feature-icon">☀️</span>
-                    <div>
-                        <strong>Renewables</strong>
-                        <p>Solar panels & wind turbines</p>
-                    </div>
+                    <div><strong>Renewables</strong><p>Solar panels & wind turbines</p></div>
                 </div>
                 <div class="feature-item">
                     <span class="feature-icon">📝</span>
-                    <div>
-                        <strong>OSM Notes</strong>
-                        <p>Reference information & user reports</p>
-                    </div>
+                    <div><strong>OSM Notes</strong><p>Reference information & user reports</p></div>
                 </div>
             </div>
         </section>
@@ -207,17 +191,15 @@
         <!-- Stats and progress -->
         <div id="stats" class="stats" role="status" aria-live="polite"></div>
         <div id="progressIndicator" class="progress-indicator">
-            <div class="progress-bar">
-                <div class="progress-fill"></div>
-            </div>
+            <div class="progress-bar"><div class="progress-fill"></div></div>
             <div class="progress-text">Loading...</div>
         </div>
         <div id="progressLog" class="progress-log" role="log" aria-live="polite"></div>
         
-        <!-- Main content area -->
+        <!-- Main content -->
         <main class="grid" role="main">
             <div class="cards-container" id="patches" aria-live="polite" aria-label="Available mapping patches">
-                <!-- Patches will be rendered here -->
+                <!-- Patches rendered here -->
             </div>
         </main>
         
@@ -239,7 +221,10 @@
     <script>
         'use strict';
         
-        // Configuration
+        // ========================================
+        // CONFIGURATION & STATE
+        // ========================================
+        
         const CONFIG = {
             SUPABASE_URL: 'https://teumppdbhbrozswbpond.supabase.co/rest/v1',
             SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRldW1wcGRiaGJyb3pzd2Jwb25kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAyMjY2MDYsImV4cCI6MjA2NTgwMjYwNn0.8j2yv4SuZJXnHV_spPIQQGsPBrvZrmYld6IlT7Omu7E',
@@ -251,7 +236,6 @@
             PAGINATION_SIZE: 50
         };
         
-        // Application state
         const AppState = {
             currentPatches: [],
             isLoading: false,
@@ -260,7 +244,10 @@
             lastRefresh: Date.now()
         };
 
-        // Toast notification system
+        // ========================================
+        // UTILITY CLASSES
+        // ========================================
+
         class ToastManager {
             constructor() {
                 this.container = document.getElementById('toastContainer');
@@ -290,9 +277,6 @@
             }
         }
         
-        const toast = new ToastManager();
-
-        // Theme management
         class ThemeManager {
             constructor() {
                 this.applyTheme(AppState.theme);
@@ -316,10 +300,15 @@
                 icon.textContent = AppState.theme === 'light' ? '🌙' : '☀️';
             }
         }
-        
+
+        // Initialize managers
+        const toast = new ToastManager();
         const themeManager = new ThemeManager();
 
-        // Utility functions
+        // ========================================
+        // LOGGING & UI UTILITIES
+        // ========================================
+
         function logProgress(message, type = 'info') {
             const log = document.getElementById('progressLog');
             const entry = document.createElement('div');
@@ -375,7 +364,23 @@
             overlay.classList.remove('active');
         }
 
-        // Database functions
+        function setLoading(loading) {
+            AppState.isLoading = loading;
+            const patches = document.getElementById('patches');
+            
+            if (loading) {
+                patches.classList.add('loading');
+                showProgressIndicator('Loading patches...');
+            } else {
+                patches.classList.remove('loading');
+                hideProgressIndicator();
+            }
+        }
+
+        // ========================================
+        // DATABASE & CONNECTION
+        // ========================================
+
         function getSupabaseHeaders() {
             return {
                 'apikey': CONFIG.SUPABASE_KEY,
@@ -407,7 +412,6 @@
             }
         }
 
-        // Connection status
         function updateConnectionStatus(online, message = '') {
             const status = document.getElementById('connectionStatus');
             AppState.connectionStatus = online ? 'online' : 'offline';
@@ -433,7 +437,10 @@
             }
         }
 
-        // Validation
+        // ========================================
+        // VALIDATION
+        // ========================================
+
         function validateCountryCode(code) {
             const trimmed = code.trim().toUpperCase();
             const isValid = /^[A-Z]{2}$/.test(trimmed);
@@ -456,21 +463,11 @@
                 loadPatches();
             }
         }
-        
-        function setLoading(loading) {
-            AppState.isLoading = loading;
-            const patches = document.getElementById('patches');
-            
-            if (loading) {
-                patches.classList.add('loading');
-                showProgressIndicator('Loading patches...');
-            } else {
-                patches.classList.remove('loading');
-                hideProgressIndicator();
-            }
-        }
-        
-        // Patch loading
+
+        // ========================================
+        // PATCH DATA & RENDERING
+        // ========================================
+
         async function loadPatches() {
             if (AppState.isLoading) return;
             
@@ -491,11 +488,13 @@
                     throw new Error('Database connection failed');
                 }
 
+                // Get patches
                 let query = `/osmose_patches?select=patch_id,country_code,country_name,error_count,area_km2,perimeter_km,priority,difficulty,created_at&country_code=eq.${countryCode}&order=priority.desc,created_at.asc&limit=${CONFIG.PAGINATION_SIZE}`;
                 
                 const patches = await supabaseQuery(query);
                 logProgress(`Found ${patches.length} patches in database`, 'success');
                 
+                // Filter completed if needed
                 let filteredPatches = patches;
                 if (!showCompleted) {
                     const completedQuery = `/patch_assignments?select=patch_id&status=eq.completed`;
@@ -508,6 +507,7 @@
                 
                 AppState.currentPatches = filteredPatches;
                 
+                // Get completion status
                 const patchIds = AppState.currentPatches.map(p => p.patch_id);
                 const statusQuery = `/patch_assignments?select=patch_id,status&patch_id=in.(${patchIds.join(',')})&status=eq.completed`;
                 const completedStatuses = await supabaseQuery(statusQuery);
@@ -540,8 +540,7 @@
                 setLoading(false);
             }
         }
-        
-        // Patch rendering
+
         function renderPatches(patches) {
             const container = document.getElementById('patches');
             
@@ -610,7 +609,7 @@
                         <div class="patch-summary">
                             ${patch.status === 'completed' ? 
                                 '<div class="completion-indicator">✅ Mapping completed</div>' :
-                                '<div class="action-hint">🚀 Click to load: Boundary+Notes → Power (active) → Auto-zoom to boundary</div>'
+                                '<div class="action-hint">🚀 Boundary+Notes → Power (active) → Auto-zoom</div>'
                             }
                         </div>
                         
@@ -660,7 +659,7 @@
                                 
                                 <div class="action-buttons">
                                     <button class="button load-button" onclick="loadPatchInJOSM('${patch.patch_id}', this); event.stopPropagation();">
-                                        🚀 <span>Load in JOSM (2-Layer + Zoom)</span>
+                                        🚀 <span>Load in JOSM</span>
                                     </button>
                                     <button class="button complete-button" onclick="markPatchComplete('${patch.patch_id}'); event.stopPropagation();">
                                         ✅ <span>Mark Complete</span>
@@ -681,7 +680,10 @@
             }).join('');
         }
 
-        // Patch expansion
+        // ========================================
+        // PATCH EXPANSION UI
+        // ========================================
+
         function handlePatchKeydown(event, patchId) {
             if (event.key === 'Enter') {
                 event.preventDefault();
@@ -737,7 +739,10 @@
             document.body.style.overflow = '';
         }
 
-        // Get patch details
+        // ========================================
+        // JOSM DATA PROCESSING
+        // ========================================
+
         async function getPatchDetails(patchId) {
             try {
                 logProgressForPatch(patchId, 'Fetching patch geometry...', 'info');
@@ -801,14 +806,13 @@
                 throw error;
             }
         }
-        
-        // Generate OSM XML for boundary rectangle
+
         function createBoundaryOSMXML(bbox, patchId) {
             const nodes = [
-                { id: -1, lat: bbox.min_lat, lon: bbox.min_lon }, // Bottom-left
-                { id: -2, lat: bbox.min_lat, lon: bbox.max_lon }, // Bottom-right  
-                { id: -3, lat: bbox.max_lat, lon: bbox.max_lon }, // Top-right
-                { id: -4, lat: bbox.max_lat, lon: bbox.min_lon }  // Top-left
+                { id: -1, lat: bbox.min_lat, lon: bbox.min_lon },
+                { id: -2, lat: bbox.min_lat, lon: bbox.max_lon },
+                { id: -3, lat: bbox.max_lat, lon: bbox.max_lon },
+                { id: -4, lat: bbox.max_lat, lon: bbox.min_lon }
             ];
             
             return `<?xml version="1.0" encoding="UTF-8"?>
@@ -829,7 +833,6 @@ ${nodes.map(node => `    <nd ref="${node.id}"/>`).join('\n')}
 </osm>`;
         }
 
-        // Overpass query for power infrastructure
         function createOverpassQuery(bbox) {
             return `[out:xml][timeout:180];
 (
@@ -859,7 +862,85 @@ out meta;
 out meta qt;`;
         }
 
-        // Load power infrastructure from Overpass
+        function convertNotesToOSMXML(notes, patchId) {
+            let nodeId = -1000;
+            let xmlContent = `<?xml version="1.0" encoding="UTF-8"?>\n<osm version="0.6" generator="Game of Grids - OSM Notes">\n`;
+
+            notes.forEach(note => {
+                const coords = note.geometry.coordinates; // [lon, lat]
+                const props = note.properties;
+                
+                xmlContent += `  <node id="${nodeId}" lat="${coords[1].toFixed(7)}" lon="${coords[0].toFixed(7)}" version="1">\n`;
+                xmlContent += `    <tag k="note:id" v="${props.id}"/>\n`;
+                xmlContent += `    <tag k="note:status" v="${props.status}"/>\n`;
+                xmlContent += `    <tag k="note:date_created" v="${props.date_created}"/>\n`;
+                
+                if (props.closed_at) {
+                    xmlContent += `    <tag k="note:closed_at" v="${props.closed_at}"/>\n`;
+                }
+                
+                if (props.comments && props.comments.length > 0) {
+                    const firstComment = props.comments[0];
+                    const escapedText = (firstComment.text || '')
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&apos;');
+                    
+                    xmlContent += `    <tag k="note:comment" v="${escapedText}"/>\n`;
+                    xmlContent += `    <tag k="note:user" v="${firstComment.user || 'Anonymous'}"/>\n`;
+                    xmlContent += `    <tag k="note:action" v="${firstComment.action}"/>\n`;
+                    
+                    if (firstComment.date) {
+                        xmlContent += `    <tag k="note:comment_date" v="${firstComment.date}"/>\n`;
+                    }
+                }
+                
+                xmlContent += `    <tag k="source" v="OSM Notes API"/>\n`;
+                xmlContent += `    <tag k="fixme" v="OSM Note - Do not upload as OSM data"/>\n`;
+                xmlContent += `  </node>\n`;
+                
+                nodeId--;
+            });
+
+            xmlContent += `</osm>`;
+            return xmlContent;
+        }
+
+        function mergeBoundaryAndNotesXML(boundaryXML, notesXML) {
+            try {
+                const extractContent = (xmlString) => {
+                    const osmStart = xmlString.indexOf('<osm');
+                    const osmTagEnd = xmlString.indexOf('>', osmStart) + 1;
+                    const osmEnd = xmlString.lastIndexOf('</osm>');
+                    
+                    if (osmStart === -1 || osmTagEnd === -1 || osmEnd === -1) {
+                        throw new Error('Invalid XML structure');
+                    }
+                    
+                    return xmlString.substring(osmTagEnd, osmEnd).trim();
+                };
+
+                const boundaryContent = extractContent(boundaryXML);
+                const notesContent = extractContent(notesXML);
+
+                return `<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6" generator="Game of Grids - Combined Boundary &amp; Notes">
+${boundaryContent}
+${notesContent}
+</osm>`;
+                
+            } catch (error) {
+                console.error('XML merge error:', error);
+                return boundaryXML; // Fallback
+            }
+        }
+
+        // ========================================
+        // JOSM LOADING FUNCTIONS
+        // ========================================
+
         async function loadOverpassDataInJOSM(bbox, patchId) {
             const overpassQL = createOverpassQuery(bbox);
             const overpassUrl = 'https://overpass-api.de/api/interpreter?' + 
@@ -892,118 +973,27 @@ out meta qt;`;
             }
         }
 
-        // Convert OSM Notes GeoJSON to OSM XML format
-        function convertNotesToOSMXML(notes, patchId) {
-            let nodeId = -1000; // Use negative IDs to avoid conflicts
-            let xmlContent = `<?xml version="1.0" encoding="UTF-8"?>\n<osm version="0.6" generator="Game of Grids - OSM Notes">\n`;
-
-            notes.forEach(note => {
-                const coords = note.geometry.coordinates; // [lon, lat]
-                const props = note.properties;
-                
-                // Create a node for each note
-                xmlContent += `  <node id="${nodeId}" lat="${coords[1].toFixed(7)}" lon="${coords[0].toFixed(7)}" version="1">\n`;
-                xmlContent += `    <tag k="note:id" v="${props.id}"/>\n`;
-                xmlContent += `    <tag k="note:status" v="${props.status}"/>\n`;
-                xmlContent += `    <tag k="note:date_created" v="${props.date_created}"/>\n`;
-                
-                if (props.closed_at) {
-                    xmlContent += `    <tag k="note:closed_at" v="${props.closed_at}"/>\n`;
-                }
-                
-                // Add the first comment as the main note text
-                if (props.comments && props.comments.length > 0) {
-                    const firstComment = props.comments[0];
-                    // Escape XML entities in the comment text
-                    const escapedText = (firstComment.text || '')
-                        .replace(/&/g, '&amp;')
-                        .replace(/</g, '&lt;')
-                        .replace(/>/g, '&gt;')
-                        .replace(/"/g, '&quot;')
-                        .replace(/'/g, '&apos;');
-                    
-                    xmlContent += `    <tag k="note:comment" v="${escapedText}"/>\n`;
-                    xmlContent += `    <tag k="note:user" v="${firstComment.user || 'Anonymous'}"/>\n`;
-                    xmlContent += `    <tag k="note:action" v="${firstComment.action}"/>\n`;
-                    
-                    if (firstComment.date) {
-                        xmlContent += `    <tag k="note:comment_date" v="${firstComment.date}"/>\n`;
-                    }
-                }
-                
-                xmlContent += `    <tag k="source" v="OSM Notes API"/>\n`;
-                xmlContent += `    <tag k="fixme" v="OSM Note - Do not upload as OSM data"/>\n`;
-                xmlContent += `  </node>\n`;
-                
-                nodeId--;
-            });
-
-            xmlContent += `</osm>`;
-            return xmlContent;
-        }
-
-        // Merge boundary XML and notes XML into a single combined XML file
-        function mergeBoundaryAndNotesXML(boundaryXML, notesXML, patchId) {
-            try {
-                // More robust content extraction using DOM-like approach
-                const extractContent = (xmlString) => {
-                    // Find content between <osm> tags
-                    const osmStart = xmlString.indexOf('<osm');
-                    const osmTagEnd = xmlString.indexOf('>', osmStart) + 1;
-                    const osmEnd = xmlString.lastIndexOf('</osm>');
-                    
-                    if (osmStart === -1 || osmTagEnd === -1 || osmEnd === -1) {
-                        throw new Error('Invalid XML structure');
-                    }
-                    
-                    return xmlString.substring(osmTagEnd, osmEnd).trim();
-                };
-
-                const boundaryContent = extractContent(boundaryXML);
-                const notesContent = extractContent(notesXML);
-
-                // Create combined XML with proper structure
-                const combinedXML = `<?xml version="1.0" encoding="UTF-8"?>
-<osm version="0.6" generator="Game of Grids - Combined Boundary &amp; Notes">
-${boundaryContent}
-${notesContent}
-</osm>`;
-
-                return combinedXML;
-                
-            } catch (error) {
-                console.error('XML merge error:', error);
-                // Fallback: return just boundary XML if merge fails
-                return boundaryXML;
-            }
-        }
-
-        // Load merged boundary and notes XML into JOSM as a single layer
         async function loadMergedBoundaryAndNotesInJOSM(bbox, notes, patchId) {
             logProgressForPatch(patchId, 'Creating combined boundary & notes layer...', 'info');
 
             try {
-                // Generate both XML files
                 const boundaryXML = createBoundaryOSMXML(bbox, patchId);
                 let combinedXML;
 
                 if (notes.length > 0) {
                     const notesXML = convertNotesToOSMXML(notes, patchId);
-                    combinedXML = mergeBoundaryAndNotesXML(boundaryXML, notesXML, patchId);
+                    combinedXML = mergeBoundaryAndNotesXML(boundaryXML, notesXML);
                     logProgressForPatch(patchId, `Merged XML created (${notes.length} notes + boundary)`, 'info');
                 } else {
-                    // If no notes, just use boundary XML
                     combinedXML = boundaryXML;
                     logProgressForPatch(patchId, 'No notes found, using boundary-only layer', 'info');
                 }
 
-                // Validate XML length (JOSM has URL length limits)
                 if (combinedXML.length > 50000) {
                     logProgressForPatch(patchId, 'Combined XML too large, falling back to boundary only', 'warning');
                     combinedXML = boundaryXML;
                 }
 
-                // Load combined data into JOSM as a single locked layer
                 const encodedCombinedData = encodeURIComponent(combinedXML);
                 
                 const loadCombinedUrl = `${CONFIG.JOSM_BASE_URL}/load_data?` +
@@ -1013,8 +1003,7 @@ ${notesContent}
                     `layer_locked=true&` +
                     `data=${encodedCombinedData}`;
                 
-                // Log URL length for debugging
-                logProgressForPatch(patchId, `Sending ${combinedXML.length} chars to JOSM (URL: ${loadCombinedUrl.length} chars)`, 'info');
+                logProgressForPatch(patchId, `Sending ${combinedXML.length} chars to JOSM`, 'info');
                 
                 const josmCombinedResponse = await fetch(loadCombinedUrl, {
                     method: 'GET',
@@ -1037,12 +1026,10 @@ ${notesContent}
             }
         }
         
-        // Zoom JOSM to specific bounding box
         async function zoomJOSMToBbox(bbox, patchId) {
             logProgressForPatch(patchId, 'Setting zoom to patch boundary...', 'info');
             
             try {
-                // Use JOSM zoom command with bbox parameters
                 const zoomUrl = `${CONFIG.JOSM_BASE_URL}/zoom?` +
                     `left=${bbox.min_lon}&` +
                     `bottom=${bbox.min_lat}&` +
@@ -1067,7 +1054,10 @@ ${notesContent}
             }
         }
 
-        // Main patch loading function with FIXED zoom implementation
+        // ========================================
+        // MAIN PATCH LOADING FUNCTION
+        // ========================================
+
         async function loadPatchInJOSM(patchId, buttonElement) {
             const mapperId = document.getElementById(`mapperId-${patchId}`).value.trim();
             if (!mapperId) {
@@ -1084,7 +1074,6 @@ ${notesContent}
                 logProgressForPatch(patchId, `Starting 2-layer patch load with zoom fix for ${mapperId}`, 'info');
                 
                 const patchData = await getPatchDetails(patchId);
-                
                 if (!patchData.bbox) {
                     throw new Error('Could not determine patch coordinates');
                 }
@@ -1101,7 +1090,6 @@ ${notesContent}
                 // STEP 1: Load merged boundary+notes layer FIRST
                 buttonElement.innerHTML = '🔗 <span>Creating Merged Layer...</span>';
                 
-                // Fetch OSM notes data
                 const bboxString = `${patchData.bbox.min_lon},${patchData.bbox.min_lat},${patchData.bbox.max_lon},${patchData.bbox.max_lat}`;
                 const notesApiUrl = `https://api.openstreetmap.org/api/0.6/notes.json?bbox=${bboxString}&limit=10000&closed=7`;
 
@@ -1125,25 +1113,20 @@ ${notesContent}
                     logProgressForPatch(patchId, `Notes fetch failed: ${notesError.message}, proceeding with boundary only`, 'warning');
                 }
 
-                // Create merged boundary+notes layer (loads first)
                 const mergedLoaded = await loadMergedBoundaryAndNotesInJOSM(patchData.bbox, notesFeatures, patchId);
 
-                // STEP 2: Load power infrastructure data from Overpass LAST (becomes active layer)
+                // STEP 2: Load power infrastructure data LAST (becomes active layer)
                 buttonElement.innerHTML = '🔌 <span>Loading Power Data...</span>';
                 const powerDataLoaded = await loadOverpassDataInJOSM(patchData.bbox, patchId);
 
-                // STEP 3: Zoom to the full patch boundary (separate command ensures proper zoom)
+                // STEP 3: Zoom to the full patch boundary
                 buttonElement.innerHTML = '🔍 <span>Setting Zoom...</span>';
                 const zoomSet = await zoomJOSMToBbox(patchData.bbox, patchId);
 
-                // Summary results
+                // Summary
                 const results = [];
                 if (mergedLoaded) {
-                    if (notesFeatures.length > 0) {
-                        results.push(`merged boundary+notes (${notesFeatures.length} notes)`);
-                    } else {
-                        results.push('boundary');
-                    }
+                    results.push(notesFeatures.length > 0 ? `merged boundary+notes (${notesFeatures.length} notes)` : 'boundary');
                 }
                 if (powerDataLoaded) results.push('power infrastructure (ACTIVE)');
                 
@@ -1152,9 +1135,7 @@ ${notesContent}
                     logProgressForPatch(patchId, `🎉 Complete! 2-layer load successful${zoomText}`, 'success');
                     toast.show(`Patch ${patchId} loaded: ${results.join(' + ')} for ${mapperId}`, 'success');
                 } else {
-                    const loadedItems = results.filter((_, index) => 
-                        index === 0 ? mergedLoaded : powerDataLoaded
-                    );
+                    const loadedItems = results.filter((_, index) => index === 0 ? mergedLoaded : powerDataLoaded);
                     logProgressForPatch(patchId, `⚠️ Partial load: ${loadedItems.join(' + ')} loaded`, 'warning');
                     toast.show(`Patch ${patchId} partially loaded: ${loadedItems.join(' + ')}`, 'warning');
                 }
@@ -1168,7 +1149,10 @@ ${notesContent}
             }
         }
 
-        // Mark patch complete
+        // ========================================
+        // PATCH COMPLETION
+        // ========================================
+
         async function markPatchComplete(patchId) {
             const mapperId = document.getElementById(`mapperId-${patchId}`).value.trim();
             if (!mapperId) {
@@ -1206,7 +1190,7 @@ ${notesContent}
                     assigned_at: new Date().toISOString(),
                     completed_at: new Date().toISOString(),
                     completion_notes: mappingNotes || null,
-                    app_version: '2.2.0-zoom-fixed'
+                    app_version: '2.2.0-clean'
                 };
                 
                 await supabaseQuery('/patch_assignments', {
@@ -1227,7 +1211,10 @@ ${notesContent}
             }
         }
 
-        // Open in Overpass Turbo
+        // ========================================
+        // UTILITY FUNCTIONS
+        // ========================================
+
         async function openOverpassLink(patchId) {
             try {
                 const patchData = await getPatchDetails(patchId);
@@ -1249,7 +1236,6 @@ ${notesContent}
             }
         }
 
-        // Test functions
         async function testJOSM() {
             try {
                 const response = await fetch(`${CONFIG.JOSM_BASE_URL}/version`, { 
@@ -1259,11 +1245,7 @@ ${notesContent}
                 
                 if (response.ok) {
                     const version = await response.json();
-                    return { 
-                        connected: true, 
-                        version,
-                        message: 'JOSM connection successful!'
-                    };
+                    return { connected: true, version, message: 'JOSM connection successful!' };
                 } else {
                     return { 
                         connected: false, 
@@ -1395,7 +1377,7 @@ Troubleshooting:
                 });
                 
                 message += `\n🔧 Technical Info:\n`;
-                message += `  Version: 2.2.0 (2-Layer + Zoom Fix: Boundary+Notes → Power → Zoom)\n`;
+                message += `  Version: 2.2.0-clean (Boundary+Notes → Power → Zoom)\n`;
                 message += `  Connection: ${AppState.connectionStatus}\n`;
                 message += `  Theme: ${AppState.theme}\n`;
                 
@@ -1408,6 +1390,15 @@ Troubleshooting:
             } finally {
                 hideProgressIndicator();
             }
+        }
+
+        // ========================================
+        // EVENT HANDLERS & INITIALIZATION
+        // ========================================
+
+        function toggleKeyboardHelp() {
+            const help = document.getElementById('keyboardHelp');
+            help.style.display = help.style.display === 'block' ? 'none' : 'block';
         }
 
         // Keyboard shortcuts
@@ -1446,12 +1437,7 @@ Troubleshooting:
             }
         });
 
-        function toggleKeyboardHelp() {
-            const help = document.getElementById('keyboardHelp');
-            help.style.display = help.style.display === 'block' ? 'none' : 'block';
-        }
-
-        // Initialization
+        // Application initialization
         window.addEventListener('load', async () => {
             updateConnectionStatus(false, 'Connecting...');
             
